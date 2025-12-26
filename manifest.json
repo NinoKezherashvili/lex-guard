@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "LexGuard",
+  "version": "1.0.0",
+  "description": "AI Data Protection - Detect and protect sensitive data before sharing with ChatGPT",
+  "permissions": ["storage", "activeTab"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "css": ["content.css"],
+      "js": [
+        "utils.js",
+        "patterns.js",
+        "translations.js",
+        "ui.js",
+        "scanner.js",
+        "main.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
