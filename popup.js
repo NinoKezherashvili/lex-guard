@@ -17,7 +17,9 @@ const TRANSLATIONS = {
             email: 'Email Addresses',
             iban: 'IBAN / Bank Info',
             passport: 'Passport Numbers',
-            phone: 'Phone Numbers'
+            phone: 'Phone Numbers',
+            georgianCompanyId: 'Company ID',
+            phoneGeorgia: 'Georgian Phone',
         }
     },
     ka: {
@@ -38,7 +40,9 @@ const TRANSLATIONS = {
             email: 'ელ.ფოსტის მისამართები',
             iban: 'IBAN / საბანკო ინფო',
             passport: 'პასპორტის ნომრები',
-            phone: 'ტელეფონის ნომრები'
+            phone: 'ტელეფონის ნომრები',
+            georgianCompanyId: 'საიდენტიფიკაციო კოდი',
+            phoneGeorgia: 'ტელეფონის ნომერი',
         }
     }
 };

@@ -17,6 +17,7 @@ LexGuard.TRANSLATIONS = {
         redacted: '[REDACTED]',
         placeholder: 'placeholder',
         deleted: 'deleted',
+        replacing: 'Replacing...',
         allItems: 'All items',
         reviewBeforeSending: '⚠️ Review sensitive data before sending',
         showHideValue: 'Show/Hide value',
@@ -29,7 +30,8 @@ LexGuard.TRANSLATIONS = {
             iban: 'IBAN / Bank Info',
             passport: 'Passport Number',
             phone: 'Phone Number',
-            zipCode: 'ZIP / Postal Code'
+            zipCode: 'ZIP / Postal Code',
+            georgianCompanyId: "Georgian Company ID",
         }
     },
     ka: {
@@ -46,6 +48,7 @@ LexGuard.TRANSLATIONS = {
         redacted: '[ᲠᲔᲓᲐᲥᲢᲘᲠᲔᲑᲣᲚᲘ]',
         placeholder: 'შაბლონით',
         deleted: 'წაშლილია',
+        replacing: 'იცვლება...',
         allItems: 'ყველა',
         reviewBeforeSending: '⚠️ გადაამოწმეთ სენსიტიური მონაცემები გაგზავნამდე',
         showHideValue: 'მნიშვნელობის ჩვენება/დამალვა',
@@ -58,8 +61,9 @@ LexGuard.TRANSLATIONS = {
             iban: 'IBAN / საბანკო ინფო',
             passport: 'პასპორტის ნომერი',
             phone: 'ტელეფონის ნომერი',
-            zipCode: 'საფოსტო ინდექსი'
-        }
+            zipCode: 'საფოსტო ინდექსი',
+            georgianCompanyId: 'საიდენტიფიკაციო კოდი',
+        },
     }
 };
 

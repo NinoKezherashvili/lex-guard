@@ -4,10 +4,51 @@ LexGuard.ui = {
     banner: null,
     tooltip: null,
     replaceMenu: null,
+    loadingOverlay: null,
 
     init: function () {
         this.createBanner();
         this.createTooltip();
+        this.createLoadingOverlay();
+    },
+
+    // LOADING OVERLAY
+    createLoadingOverlay: function () {
+        if (document.getElementById('lexguard-loading')) {
+            this.loadingOverlay = document.getElementById('lexguard-loading');
+            return;
+        }
+
+        const t = LexGuard.t;
+        const el = document.createElement('div');
+        el.id = 'lexguard-loading';
+        el.innerHTML = `
+            <div class="lexguard-loading-content">
+                <div class="lexguard-spinner"></div>
+                <span class="lexguard-loading-text">${t('replacing')}</span>
+            </div>
+        `;
+        document.body.appendChild(el);
+        this.loadingOverlay = el;
+    },
+
+    showLoading: function () {
+        if (!this.loadingOverlay) this.createLoadingOverlay();
+        this.loadingOverlay.classList.add('visible');
+
+        // Disable banner buttons while loading
+        const buttons = document.querySelectorAll('#lexguard-banner button');
+        buttons.forEach(btn => btn.disabled = true);
+    },
+
+    hideLoading: function () {
+        if (this.loadingOverlay) {
+            this.loadingOverlay.classList.remove('visible');
+        }
+
+        // Re-enable banner buttons
+        const buttons = document.querySelectorAll('#lexguard-banner button');
+        buttons.forEach(btn => btn.disabled = false);
     },
 
     // BANNER
@@ -63,6 +104,7 @@ LexGuard.ui = {
 
         const replaceAllBtn = document.getElementById('lexguard-replace-all');
         replaceAllBtn.addEventListener('click', (e) => {
+            if (LexGuard.scanner.isProcessing) return;
             console.log('LexGuard: Replace All button clicked');
             e.preventDefault();
             e.stopPropagation();
@@ -71,6 +113,8 @@ LexGuard.ui = {
 
         // Replace menu options 
         this.replaceMenu.addEventListener('click', (e) => {
+            if (LexGuard.scanner.isProcessing) return;
+
             const option = e.target.closest('.lexguard-replace-option');
             if (!option) {
                 console.log('LexGuard: Click in menu but not on option');
@@ -179,6 +223,7 @@ LexGuard.ui = {
             // Replace button
             const replaceBtn = row.querySelector('.lexguard-item-replace');
             replaceBtn.addEventListener('click', (e) => {
+                if (LexGuard.scanner.isProcessing) return;
                 console.log('LexGuard: Item replace button clicked, index:', index);
                 e.preventDefault();
                 e.stopPropagation();

@@ -5,6 +5,7 @@ LexGuard.scanner = {
     hasShaken: false,
     hasPlayedSound: false,
     detectedItems: [],
+    isProcessing: false,
 
     _tooltipShowHandler: null,
     _tooltipHideHandler: null,
@@ -63,6 +64,12 @@ LexGuard.scanner = {
 
                     if (/^[0\-\s\(\)\.]+$/.test(match)) {
                         return;
+                    }
+
+                    if (config.minDigits || config.maxDigits) {
+                        const digitCount = match.replace(/\D/g, '').length;
+                        if (config.minDigits && digitCount < config.minDigits) return;
+                        if (config.maxDigits && digitCount > config.maxDigits) return;
                     }
 
                     if (!found.find(f => f.value === match)) {
@@ -131,48 +138,107 @@ LexGuard.scanner = {
         return input.textContent || input.innerText || input.value || '';
     },
 
-    setInputText: function (text) {
+    // Replace text within DOM while preserving structure
+    replaceInDOM: function (searchValue, replacement) {
         const input = this.getInputElement();
-        if (!input) {
-            console.warn('LexGuard: No input element found');
-            return;
+        if (!input) return false;
+
+        // Get all text nodes
+        const textNodes = this.getTextNodes(input);
+        let replaced = false;
+
+        // Handle replacements that might span multiple text nodes
+        for (const node of textNodes) {
+            if (node.textContent.includes(searchValue)) {
+                node.textContent = node.textContent.split(searchValue).join(replacement);
+                replaced = true;
+            }
         }
 
-        if (input.contentEditable === 'true' || input.isContentEditable) {
-            input.focus();
-
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(input);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            document.execCommand('insertText', false, text);
-
+        if (replaced) {
             input.dispatchEvent(new InputEvent('input', {
                 bubbles: true,
                 cancelable: true,
-                inputType: 'insertText',
-                data: text
+                inputType: 'insertText'
             }));
-        } else {
-            const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype,
-                'value'
-            ).set;
-
-            nativeTextAreaValueSetter.call(input, text);
-            input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
         }
+
+        return replaced;
+    },
+
+    // Get all text nodes within an element
+    getTextNodes: function (element) {
+        const textNodes = [];
+        const walker = document.createTreeWalker(
+            element,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        let node;
+        while (node = walker.nextNode()) {
+            textNodes.push(node);
+        }
+
+        return textNodes;
+    },
+
+    setInputTextFallback: function (text) {
+        return new Promise((resolve) => {
+            const input = this.getInputElement();
+            if (!input) {
+                resolve(false);
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                if (input.contentEditable === 'true' || input.isContentEditable) {
+                    input.focus();
+
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(input);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+
+                    document.execCommand('insertText', false, text);
+
+                    input.dispatchEvent(new InputEvent('input', {
+                        bubbles: true,
+                        cancelable: true,
+                        inputType: 'insertText',
+                        data: text
+                    }));
+                } else {
+                    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+                        window.HTMLTextAreaElement.prototype,
+                        'value'
+                    ).set;
+
+                    nativeTextAreaValueSetter.call(input, text);
+                    input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                }
+
+                setTimeout(() => resolve(true), 100);
+            });
+        });
     },
 
     // REPLACE FUNCTIONS
-    replaceItem: function (index, action) {
+    replaceItem: async function (index, action) {
+        if (this.isProcessing) return;
+
         const item = this.detectedItems[index];
         if (!item) {
             console.warn('LexGuard: Item not found at index', index);
             return;
         }
+
+        this.isProcessing = true;
+        LexGuard.ui.showLoading();
+
+        await new Promise(r => setTimeout(r, 50));
 
         const t = LexGuard.t;
         let replacement = '';
@@ -186,22 +252,38 @@ LexGuard.scanner = {
                 break;
         }
 
-        const currentText = this.getInputText();
-        const newText = currentText.split(item.value).join(replacement);
-        this.setInputText(newText);
+        const success = this.replaceInDOM(item.value, replacement);
+
+        if (!success) {
+            const currentText = this.getInputText();
+            const newText = currentText.split(item.value).join(replacement);
+            await this.setInputTextFallback(newText);
+        }
+
+        await new Promise(r => setTimeout(r, 50));
 
         const patternName = t(`patterns.${item.type}`) || item.name;
         this.detectedItems = this.detectedItems.filter((_, i) => i !== index);
 
         LexGuard.ui.removeItem(index);
+        LexGuard.ui.hideLoading();
+        this.isProcessing = false;
+
         this.showReplaceFeedback(patternName, action);
     },
 
-    replaceAll: function (action) {
-        const t = LexGuard.t;
-        let currentText = this.getInputText();
+    replaceAll: async function (action) {
+        if (this.isProcessing) return;
 
-        this.detectedItems.forEach(item => {
+        this.isProcessing = true;
+        LexGuard.ui.showLoading();
+
+        await new Promise(r => setTimeout(r, 50));
+
+        const t = LexGuard.t;
+        let allSuccess = true;
+
+        for (const item of this.detectedItems) {
             let replacement = '';
             switch (action) {
                 case 'placeholder':
@@ -211,15 +293,40 @@ LexGuard.scanner = {
                     replacement = '';
                     break;
             }
-            currentText = currentText.split(item.value).join(replacement);
-        });
 
-        this.setInputText(currentText);
+            const success = this.replaceInDOM(item.value, replacement);
+            if (!success) {
+                allSuccess = false;
+            }
+        }
+
+        if (!allSuccess) {
+            let currentText = this.getInputText();
+            this.detectedItems.forEach(item => {
+                let replacement = '';
+                switch (action) {
+                    case 'placeholder':
+                        replacement = item.placeholder;
+                        break;
+                    case 'delete':
+                        replacement = '';
+                        break;
+                }
+                currentText = currentText.split(item.value).join(replacement);
+            });
+            await this.setInputTextFallback(currentText);
+        }
+
+        await new Promise(r => setTimeout(r, 50));
+
         this.detectedItems = [];
 
         LexGuard.ui.hideBanner();
         this.unblockSendButton();
         this.hasShaken = false;
+
+        LexGuard.ui.hideLoading();
+        this.isProcessing = false;
 
         this.showReplaceFeedback(t('allItems'), action);
     },

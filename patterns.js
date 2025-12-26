@@ -53,10 +53,19 @@ LexGuard.PATTERNS = {
         name: 'Phone Number',
         icon: '📱',
         severity: 'medium',
-        pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b|\b\+\d{1,3}[-.\s]?\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/g,
-        placeholder: '(000) 000-0000',
-        redacted: '[PHONE REDACTED]'
-    }
+        // USA, UK, Germany, France, and Georgia 
+        pattern: /(?:\+(?:1|44|49|33|995)[\s\-\.]?\(?\d{1,4}\)?[\s\-\.]?\d{2,4}[\s\-\.]?\d{2,4}[\s\-\.]?\d{0,4})|(?:\([2-9]\d{2}\)[\s\-\.]?\d{3}[\s\-\.]?\d{4})|(?:[2-9]\d{2}[\s\-]\d{3}[\s\-]\d{4})|(?:0[1-9]\d{1,4}[\s\-]\d{3,4}[\s\-]\d{3,4})|(?:5\d{2}[\s\-]?\d{3}[\s\-]?\d{3})/g,
+        placeholder: '(XXX) XXX-XXXX',
+        minDigits: 7,
+        maxDigits: 15
+    },
+    georgianCompanyId: {
+        name: 'Georgian Company ID',
+        icon: '🏢',
+        severity: 'high',
+        pattern: /(?<=(?:ს\/კ|საიდენტიფიკაციო\s*(?:ნომერი|კოდი))[\s:]*)\d{9}\b/g,
+        placeholder: 'XXXXXXXXX',
+    },
 };
 
 

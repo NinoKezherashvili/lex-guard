@@ -444,3 +444,62 @@
   background: #cbd5e1;
   border-radius: 2px;
 }
+
+/* LOADING OVERLAY */
+#lexguard-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+#lexguard-loading.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lexguard-loading-content {
+  background: white;
+  padding: 20px 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.lexguard-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #0139c6;
+  border-radius: 50%;
+  animation: lexguard-spin 0.8s linear infinite;
+}
+
+.lexguard-loading-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+@keyframes lexguard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#lexguard-banner button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
