@@ -5,8 +5,6 @@ LexGuard.scanner = {
     hasShaken: false,
     hasPlayedSound: false,
     detectedItems: [],
-    _scrollHandler: null,
-    _resizeHandler: null,
 
     _tooltipShowHandler: null,
     _tooltipHideHandler: null,
@@ -38,7 +36,6 @@ LexGuard.scanner = {
         if (!text || text.length < 3) {
             LexGuard.ui.hideBanner();
             this.unblockSendButton();
-            this.removeHighlights();
             this.hasShaken = false;
             this.detectedItems = [];
             return [];
@@ -92,7 +89,6 @@ LexGuard.scanner = {
 
         if (found.length > 0) {
             LexGuard.ui.showBanner(found);
-            this.showHighlights();
 
             if (LexGuard.SETTINGS.shakeAnimation && !this.hasShaken) {
                 LexGuard.ui.shakeInput();
@@ -110,146 +106,11 @@ LexGuard.scanner = {
         } else {
             LexGuard.ui.hideBanner();
             this.unblockSendButton();
-            this.removeHighlights();
             this.hasShaken = false;
             this.hasPlayedSound = false;
         }
 
         return found;
-    },
-
-    // HIGHLIGHT UNDERLINES (Grammarly way)
-    showHighlights: function () {
-        const input = this.getInputElement();
-        if (!input || this.detectedItems.length === 0) return;
-
-        this.removeHighlights(false);
-
-        this.detectedItems.forEach(item => {
-            const positions = this.findTextPositions(input, item.value);
-
-            positions.forEach(pos => {
-                const underline = document.createElement('div');
-                underline.className = 'lexguard-underline';
-                underline.dataset.severity = item.severity;
-                underline.style.cssText = `
-                    position: absolute;
-                    left: ${pos.left}px;
-                    top: ${pos.bottom - 2}px;
-                    width: ${pos.width}px;
-                    height: 3px;
-                    pointer-events: none;
-                    z-index: 10000;
-                `;
-                document.body.appendChild(underline);
-            });
-        });
-
-        this.addPositionListeners();
-    },
-
-    findTextPositions: function (element, searchText) {
-        const positions = [];
-        const text = element.textContent || '';
-        let startIndex = 0;
-
-        while (true) {
-            const index = text.indexOf(searchText, startIndex);
-            if (index === -1) break;
-
-            const textNodeInfo = this.getTextNodeAtPosition(element, index);
-
-            if (textNodeInfo) {
-                try {
-                    const range = document.createRange();
-                    const endNodeInfo = this.getTextNodeAtPosition(element, index + searchText.length - 1);
-
-                    if (endNodeInfo) {
-                        range.setStart(textNodeInfo.node, textNodeInfo.offset);
-
-                        if (textNodeInfo.node === endNodeInfo.node) {
-                            range.setEnd(textNodeInfo.node, textNodeInfo.offset + searchText.length);
-                        } else {
-                            range.setEnd(endNodeInfo.node, endNodeInfo.offset + 1);
-                        }
-
-                        const rect = range.getBoundingClientRect();
-
-                        if (rect.width > 0) {
-                            positions.push({
-                                left: rect.left + window.scrollX,
-                                top: rect.top + window.scrollY,
-                                bottom: rect.bottom + window.scrollY,
-                                width: rect.width
-                            });
-                        }
-                    }
-                } catch (e) {
-                    console.warn('LexGuard: Could not get text position', e);
-                }
-            }
-
-            startIndex = index + 1;
-        }
-
-        return positions;
-    },
-
-    getTextNodeAtPosition: function (element, position) {
-        const walker = document.createTreeWalker(
-            element,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-        );
-
-        let currentPos = 0;
-        let node;
-
-        while (node = walker.nextNode()) {
-            const length = node.textContent.length;
-            if (currentPos + length > position) {
-                return { node: node, offset: position - currentPos };
-            }
-            currentPos += length;
-        }
-
-        return null;
-    },
-
-    addPositionListeners: function () {
-        this.removePositionListeners();
-
-        const updatePositions = LexGuard.utils.debounce(() => {
-            if (this.detectedItems.length > 0) {
-                this.showHighlights();
-            }
-        }, 50);
-
-        this._scrollHandler = updatePositions;
-        this._resizeHandler = updatePositions;
-
-        window.addEventListener('scroll', this._scrollHandler, true);
-        window.addEventListener('resize', this._resizeHandler);
-    },
-
-    removePositionListeners: function () {
-        if (this._scrollHandler) {
-            window.removeEventListener('scroll', this._scrollHandler, true);
-            this._scrollHandler = null;
-        }
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler);
-            this._resizeHandler = null;
-        }
-    },
-
-    removeHighlights: function (removeListeners = true) {
-        document.querySelectorAll('.lexguard-underline').forEach(el => el.remove());
-
-        if (removeListeners) {
-            this.removePositionListeners();
-        }
     },
 
     getInputElement: function () {
@@ -263,6 +124,7 @@ LexGuard.scanner = {
             document.querySelector('.ql-editor[contenteditable="true"]')
         );
     },
+
     getInputText: function () {
         const input = this.getInputElement();
         if (!input) return '';
@@ -275,8 +137,6 @@ LexGuard.scanner = {
             console.warn('LexGuard: No input element found');
             return;
         }
-
-        this.removeHighlights();
 
         if (input.contentEditable === 'true' || input.isContentEditable) {
             input.focus();
@@ -335,10 +195,6 @@ LexGuard.scanner = {
 
         LexGuard.ui.removeItem(index);
         this.showReplaceFeedback(patternName, action);
-
-        if (this.detectedItems.length > 0) {
-            setTimeout(() => this.showHighlights(), 100);
-        }
     },
 
     replaceAll: function (action) {
@@ -363,7 +219,6 @@ LexGuard.scanner = {
 
         LexGuard.ui.hideBanner();
         this.unblockSendButton();
-        this.removeHighlights();
         this.hasShaken = false;
 
         this.showReplaceFeedback(t('allItems'), action);
@@ -380,7 +235,6 @@ LexGuard.scanner = {
     },
 
     // SEND BUTTON BLOCKING
-
     blockSendButton: function () {
         if (this.isBlocking) return;
 
@@ -434,7 +288,6 @@ LexGuard.scanner = {
 
     handleReview: function () {
         this.unblockSendButton();
-        this.removeHighlights();
         LexGuard.ui.hideBanner();
         this.hasShaken = false;
     }
