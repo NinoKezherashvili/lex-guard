@@ -48,44 +48,55 @@ LexGuard.scanner = {
 
         for (const [key, config] of Object.entries(patterns)) {
             config.pattern.lastIndex = 0;
-            const matches = text.match(config.pattern);
 
-            if (matches) {
-                [...new Set(matches)].forEach(match => {
-                    const matchLower = match.toLowerCase();
+            let match;
+            const uniqueMatches = new Set();
 
-                    if (ignoreValues.has(matchLower)) {
-                        return;
+            while ((match = config.pattern.exec(text)) !== null) {
+                const matchValue = match[0];
+                const matchIndex = match.index;
+
+                if (uniqueMatches.has(matchValue)) continue;
+                uniqueMatches.add(matchValue);
+
+                const matchLower = matchValue.toLowerCase();
+
+                if (ignoreValues.has(matchLower)) {
+                    continue;
+                }
+
+                if (/^[0\-\s\(\)\.]+$/.test(matchValue)) {
+                    continue;
+                }
+
+                if (config.minDigits || config.maxDigits) {
+                    const digitCount = matchValue.replace(/\D/g, '').length;
+                    if (config.minDigits && digitCount < config.minDigits) continue;
+                    if (config.maxDigits && digitCount > config.maxDigits) continue;
+                }
+
+                if (config.validate) {
+                    const isValid = config.validate(matchValue, matchIndex, text);
+                    if (!isValid) {
+                        console.log(`LexGuard: Skipping ${key} match "${matchValue}" - failed validation`);
+                        continue;
                     }
+                }
 
-                    if (match.includes('[') && match.includes('REDACTED]')) {
-                        return;
-                    }
-
-                    if (/^[0\-\s\(\)\.]+$/.test(match)) {
-                        return;
-                    }
-
-                    if (config.minDigits || config.maxDigits) {
-                        const digitCount = match.replace(/\D/g, '').length;
-                        if (config.minDigits && digitCount < config.minDigits) return;
-                        if (config.maxDigits && digitCount > config.maxDigits) return;
-                    }
-
-                    if (!found.find(f => f.value === match)) {
-                        found.push({
-                            type: key,
-                            name: config.name,
-                            icon: config.icon,
-                            severity: config.severity,
-                            value: match,
-                            placeholder: config.placeholder
-                        });
-                    }
-                });
+                if (!found.find(f => f.value === matchValue)) {
+                    found.push({
+                        type: key,
+                        name: config.name,
+                        icon: config.icon,
+                        severity: config.severity,
+                        value: matchValue,
+                        placeholder: config.placeholder
+                    });
+                }
             }
         }
 
+        // Sort by severity (high first)
         found.sort((a, b) => {
             if (a.severity === 'high' && b.severity !== 'high') return -1;
             if (a.severity !== 'high' && b.severity === 'high') return 1;
@@ -166,7 +177,6 @@ LexGuard.scanner = {
         return replaced;
     },
 
-    // Get all text nodes within an element
     getTextNodes: function (element) {
         const textNodes = [];
         const walker = document.createTreeWalker(
@@ -341,7 +351,9 @@ LexGuard.scanner = {
         LexGuard.ui.showToast(`✓ ${itemName} ${actionText[action]}`);
     },
 
-    // SEND BUTTON BLOCKING
+    // SEND BUTTON & ENTER KEY BLOCKING
+    _enterKeyHandler: null,
+
     blockSendButton: function () {
         if (this.isBlocking) return;
 
@@ -364,13 +376,55 @@ LexGuard.scanner = {
             sendBtn.disabled = true;
             sendBtn.dataset.lexguardBlocked = 'true';
             sendBtn.classList.add('lexguard-blocked');
-            this.isBlocking = true;
 
             this._tooltipShowHandler = (e) => LexGuard.ui.showTooltip(e);
             this._tooltipHideHandler = () => LexGuard.ui.hideTooltip();
 
             sendBtn.addEventListener('mouseenter', this._tooltipShowHandler);
             sendBtn.addEventListener('mouseleave', this._tooltipHideHandler);
+        }
+
+        this.blockEnterKey();
+
+        this.isBlocking = true;
+    },
+
+    blockEnterKey: function () {
+        if (this._enterKeyHandler) {
+            document.removeEventListener('keydown', this._enterKeyHandler, true);
+        }
+
+        this._enterKeyHandler = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const input = this.getInputElement();
+
+                if (input && (e.target === input || input.contains(e.target))) {
+                    if (this.detectedItems.length > 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+
+                        const t = LexGuard.t;
+                        LexGuard.ui.showToast(t('reviewBeforeSending'));
+
+                        if (LexGuard.SETTINGS.shakeAnimation) {
+                            LexGuard.ui.shakeInput();
+                        }
+
+                        return false;
+                    }
+                }
+            }
+        };
+
+        // Use capture phase to intercept before ChatGPT/Gemini handlers
+        document.addEventListener('keydown', this._enterKeyHandler, true);
+    },
+
+    unblockEnterKey: function () {
+        if (this._enterKeyHandler) {
+            document.removeEventListener('keydown', this._enterKeyHandler, true);
+            this._enterKeyHandler = null;
         }
     },
 
@@ -388,6 +442,8 @@ LexGuard.scanner = {
                 sendBtn.removeEventListener('mouseleave', this._tooltipHideHandler);
             }
         }
+
+        this.unblockEnterKey();
 
         LexGuard.ui.hideTooltip();
         this.isBlocking = false;
