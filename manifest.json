@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "LexGuard",
-  "version": "1.0.0",
+  "name": "LexyGuard",
+  "version": "1.0.1",
   "description": "AI Data Protection - Detect and protect sensitive data before sharing with ChatGPT",
   "permissions": ["storage", "activeTab"],
   "icons": {
