@@ -1,347 +1,244 @@
 # LexGuard Code Review
 
-## 🔴 Critical Issues
-
-### 1. **XSS Vulnerability - innerHTML with User Data**
-**Location:** `ui.js:166, 183`
-**Risk:** High - User-controlled data inserted via innerHTML
-
-```javascript
-// Line 166 - XSS risk
-countEl.innerHTML = `<span class="high-count">${highCount} ${t('high')}</span> · <span class="medium-count">${mediumCount} ${t('medium')}</span>`;
-
-// Line 183 - XSS risk (though escapedValue is used, patternName could be compromised)
-row.innerHTML = `...${patternName}...${escapedValue}...`;
-```
-
-**Fix:** Use `textContent` for dynamic text, or ensure all user data is properly escaped.
-
-### 2. **Regex Global Flag State Issue**
-**Location:** `scanner.js:50`
-**Risk:** Medium - Global regex retains state between calls
-
-```javascript
-config.pattern.lastIndex = 0; // Good - you reset it
-```
-
-**Status:** ✅ Actually handled correctly, but could be improved by cloning patterns.
-
-### 3. **Memory Leak - Event Listeners**
-**Location:** `ui.js:144-154`
-**Risk:** Medium - Global click listener added without cleanup
-
-```javascript
-setTimeout(() => {
-    document.addEventListener('click', (e) => {
-        // This listener is never removed
-    });
-}, 100);
-```
-
-**Fix:** Store reference and remove when banner is destroyed.
-
-### 4. **Race Condition in Replace Operations**
-**Location:** `scanner.js:229-272`
-**Risk:** Medium - Multiple rapid clicks could cause issues
-
-```javascript
-if (this.isProcessing) return; // Good check
-```
-
-**Status:** ✅ Protected, but could add queue system for better UX.
+**Last Updated:** Based on current codebase state
+**Status:** Many critical issues have been addressed ✅
 
 ---
 
-## ⚠️ High Priority Issues
+## 🔴 Open Issues (Unresolved Only)
 
-### 5. **Deprecated API Usage**
-**Location:** `scanner.js:205`
-**Risk:** Medium - `document.execCommand` is deprecated
-
-```javascript
-document.execCommand('insertText', false, text);
-```
-
-**Fix:** Use modern Clipboard API or direct DOM manipulation.
-
-### 6. **Missing Error Handling in Audio Context**
-**Location:** `scanner.js:14-34`
-**Risk:** Low - Audio context may require user interaction
-
-```javascript
-const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-```
-
-**Fix:** Handle cases where audio requires user gesture (Chrome autoplay policy).
-
-### 7. **Hardcoded Pattern Count**
-**Location:** `popup.js:10, 133`
-**Risk:** Low - Pattern count hardcoded as "7" but actual count is 8
-
-```javascript
-detectingTitle: 'Detecting (7 patterns)', // Should be dynamic
-```
-
-**Fix:** Calculate dynamically from PATTERNS array.
-
-### 8. **Inconsistent Pattern Detection**
-**Location:** `popup.js:50-58` vs `patterns.js`
-**Risk:** Low - popup.js has different pattern list than patterns.js
-
-The popup shows 7 patterns but `patterns.js` has 8 patterns (missing `georgianCompanyId` in popup).
-
----
-
-## 📋 Medium Priority Issues
-
-### 9. **No Input Validation**
-**Location:** `scanner.js:replaceItem`, `replaceAll`
-**Risk:** Medium - No validation of action parameter
-
-```javascript
-switch (action) {
-    case 'placeholder':
-    case 'delete':
-        break;
-    default:
-        // No default case - invalid action silently ignored
-}
-```
-
-**Fix:** Add default case with error handling.
-
-### 10. **Potential Null Reference**
-**Location:** `scanner.js:214-220`
+### 10. **Potential Null Reference** ⚠️ STILL PRESENT
+**Location:** `scanner.js:292-295`
 **Risk:** Low - Assumes property descriptor exists
 
+**Status:** ⚠️ **NEEDS FIX** - Code assumes `getOwnPropertyDescriptor` returns a descriptor with a `set` property.
+
+**Current Code:**
 ```javascript
+// ⚠️ Could throw if descriptor is undefined or set is missing
 const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
     window.HTMLTextAreaElement.prototype,
     'value'
-).set; // Could be undefined
+).set;
 ```
 
-**Fix:** Add null check.
+**Recommended Fix:**
+```javascript
+const descriptor = Object.getOwnPropertyDescriptor(
+    window.HTMLTextAreaElement.prototype,
+    'value'
+);
+if (descriptor && descriptor.set) {
+    descriptor.set.call(input, text);
+} else {
+    input.value = text; // Fallback
+}
+```
 
-### 11. **Console.log in Production**
-**Location:** Multiple files
+---
+
+### 11. **Console.log in Production** ⚠️ STILL PRESENT
+**Location:** Multiple files (17 instances found)
 **Risk:** Low - Performance and security (exposes internal state)
 
-Many `console.log` statements should be removed or wrapped in debug flag.
+**Status:** ⚠️ **NEEDS ATTENTION** - Multiple `console.log` statements found:
+- `ui.js`: 8 instances
+- `scanner.js`: 1 instance
+- `popup.js`: 1 instance
+- `main.js`: 7 instances
 
-### 12. **Magic Numbers**
-**Location:** Multiple files
-**Risk:** Low - Hard to maintain
-
+**Recommendation:** Wrap in debug flag or remove for production:
 ```javascript
-setTimeout(findAndObserveInputs, 1000); // Why 1000ms?
-setTimeout(findAndObserveInputs, 3000); // Why 3000ms?
+const DEBUG = false; // or check environment
+if (DEBUG) console.log('LexGuard: ...');
 ```
 
-**Fix:** Use named constants.
+---
+
+### 12. **Magic Numbers** ⚠️ STILL PRESENT
+**Location:** `main.js:111-112`, `scanner.js:369, 386`, etc.
+**Risk:** Low - Hard to maintain
+
+**Status:** ⚠️ **NEEDS IMPROVEMENT** - Magic numbers found:
+- `setTimeout(findAndObserveInputs, 1000)` - Why 1000ms?
+- `setTimeout(findAndObserveInputs, 3000)` - Why 3000ms?
+- `setTimeout(..., 50)` - Multiple instances
+
+**Recommended Fix:**
+```javascript
+const TIMING = {
+    INITIAL_SCAN_DELAY: 1000,
+    RETRY_SCAN_DELAY: 3000,
+    REPLACE_DELAY: 50,
+    PASTE_HANDLER_DELAY: 50
+};
+```
 
 ---
 
 ## 💡 Code Quality Improvements
 
-### 13. **Code Duplication**
+### 13. **Code Duplication** ⚠️ PARTIALLY ADDRESSED
 **Location:** `scanner.js:replaceItem` and `replaceAll`
 **Risk:** Low - Duplicate replacement logic
 
-The replacement switch statement is duplicated. Extract to helper function.
+**Status:** ⚠️ **PARTIALLY ADDRESSED** - Both functions now use `runExclusive()` and `_isValidReplaceAction()`, but the switch statement for replacement logic is still duplicated.
 
-### 14. **Inconsistent Naming**
+**Recommendation:** Extract replacement logic to helper:
+```javascript
+_getReplacementValue: function (item, action) {
+    switch (action) {
+        case 'placeholder': return item.placeholder;
+        case 'delete': return '';
+        default: return null;
+    }
+}
+```
+
+---
+
+### 14. **Inconsistent Naming** ⚠️ STILL PRESENT
 **Location:** Various files
-- `LexGuard` vs `LG` (abbreviation)
+**Risk:** Low - Style inconsistency
+
+**Status:** ⚠️ **NEEDS STANDARDIZATION** - Mixed patterns:
+- `LexGuard` vs `LG` (abbreviation in `main.js:22`)
 - Mixed function declarations (function vs arrow)
 
-**Fix:** Establish consistent style guide.
+**Recommendation:** Establish and document style guide.
 
-### 15. **Missing JSDoc Comments**
+---
+
+### 15. **Missing JSDoc Comments** ⚠️ STILL PRESENT
 **Location:** All files
 **Risk:** Low - Harder to maintain
 
-Add JSDoc comments for public APIs.
+**Status:** ⚠️ **NEEDS IMPROVEMENT** - Only one JSDoc comment found (`_isValidReplaceAction`). Public APIs should have documentation.
 
-### 16. **No Type Safety**
+**Example:**
+```javascript
+/**
+ * Scans text for sensitive data patterns
+ * @param {string} text - Text to scan
+ * @returns {Array} Array of detected items
+ */
+scanText: function (text) { ... }
+```
+
+---
+
+### 16. **No Type Safety** ⚠️ STILL PRESENT
 **Location:** All files
 **Risk:** Medium - Runtime errors possible
 
-Consider TypeScript or JSDoc type annotations.
+**Status:** ⚠️ **CONSIDER FOR FUTURE** - Consider TypeScript or JSDoc type annotations for better type safety.
 
 ---
 
 ## 🐛 Potential Bugs
 
-### 17. **Text Replacement Edge Case**
-**Location:** `scanner.js:152-156`
+### 17. **Text Replacement Edge Case** ⚠️ STILL PRESENT
+**Location:** `scanner.js:219-225`
 **Risk:** Medium - Replacement might fail if text spans multiple nodes
 
+**Status:** ⚠️ **PARTIALLY ADDRESSED** - Code uses `getTextNodes()` to handle multiple text nodes, but replacement logic still checks each node individually. If sensitive data spans multiple nodes, it may not be caught.
+
+**Current Code:**
 ```javascript
-if (node.textContent.includes(searchValue)) {
-    node.textContent = node.textContent.split(searchValue).join(replacement);
+// ⚠️ May miss matches spanning multiple nodes
+for (const node of textNodes) {
+    if (node.textContent.includes(searchValue)) {
+        node.textContent = node.textContent.split(searchValue).join(replacement);
+    }
 }
 ```
 
-**Issue:** If sensitive data spans multiple text nodes, this won't catch it.
-
-### 18. **Send Button Selector Too Broad**
-**Location:** `scanner.js:348-361`
-**Risk:** Low - Might block wrong buttons
-
-```javascript
-'form button[type="submit"]' // Too generic
-```
-
-**Fix:** Make selectors more specific.
-
-### 19. **Translation Key Mismatch**
-**Location:** `popup.js` vs `translations.js`
-**Risk:** Low - Different translation structures
-
-`popup.js` uses different translation keys than `translations.js`.
-
-### 20. **Pattern Count Mismatch**
-**Location:** `popup.js:50-58`
-**Risk:** Low - Shows 7 patterns but 8 exist
-
-Missing `georgianCompanyId` in popup display.
-
----
-
-## ⚡ Performance Issues
-
-### 21. **Inefficient Pattern Matching**
-**Location:** `scanner.js:49-87`
-**Risk:** Low - O(n*m) complexity where n=patterns, m=text length
-
-For large text, consider:
-- Early exit strategies
-- Pattern prioritization
-- Web Workers for heavy scanning
-
-### 22. **Multiple DOM Queries**
-**Location:** `scanner.js:getInputElement`
-**Risk:** Low - Multiple querySelector calls
-
-Cache results or use single query with fallback.
-
-### 23. **MutationObserver Performance**
-**Location:** `main.js:81-101`
-**Risk:** Low - Observing entire document.body subtree
-
-Consider:
-- More specific target
-- Debouncing observer callbacks
-- Disconnect when not needed
+**Recommendation:** Consider concatenating all text nodes, performing replacement, then reconstructing.
 
 ---
 
 ## 🔒 Security Recommendations
 
-### 24. **Content Security Policy**
+### 24. **Content Security Policy** ⚠️ STILL PRESENT
 **Location:** `manifest.json`
 **Risk:** Low - No CSP defined
 
-Add CSP to manifest.json for additional security.
-
-### 25. **Sanitize All User Input**
-**Location:** All files handling user text
-**Risk:** Medium - Always sanitize before display
-
-Ensure all user-provided text is escaped before insertion into DOM.
+**Status:** ⚠️ **RECOMMENDED** - Consider adding CSP to `manifest.json` for additional security.
 
 ---
 
 ## 📝 Best Practices
 
-### 26. **Error Boundaries**
+### 26. **Error Boundaries** ⚠️ PARTIALLY ADDRESSED
 **Location:** All files
 **Risk:** Low - No try-catch in critical paths
 
-Add error boundaries around critical operations.
+**Status:** ⚠️ **PARTIALLY ADDRESSED** - Some critical operations have error handling (audio, storage), but could be more comprehensive.
 
-### 27. **Configuration Management**
-**Location:** `patterns.js`, `main.js`
-**Risk:** Low - Hardcoded values
+---
 
-Consider externalizing configuration.
-
-### 28. **Testing**
+### 28. **Testing** ⚠️ STILL MISSING
 **Location:** Project root
 **Risk:** Medium - No test files found
 
-Add unit tests for:
-- Pattern matching
-- Text replacement
+**Status:** ⚠️ **RECOMMENDED** - Add unit tests for:
+- Pattern matching accuracy
+- Text replacement logic
 - UI interactions
-
-### 29. **Documentation**
-**Location:** README.md
-**Risk:** Low - Minimal documentation
-
-Expand README with:
-- Architecture overview
-- Pattern addition guide
-- Troubleshooting
+- Edge cases
 
 ---
 
-## ✅ Positive Aspects
+## 🎯 Updated Priority Fix List
 
-1. ✅ Good use of WeakSet for memory management
-2. ✅ Proper debouncing for performance
-3. ✅ IIFE pattern for namespace isolation
-4. ✅ Modular code structure
-5. ✅ Good error handling in storage operations
-6. ✅ Accessibility considerations (aria-labels)
-7. ✅ Responsive UI design
+### ⚠️ Remaining Issues (Medium Priority)
+1. **Fix null reference in getOwnPropertyDescriptor** (Issue #10)
+2. **Extract duplicate replacement logic** (Issue #13)
+3. **Add error boundaries** (Issue #26)
+4. **Add unit tests** (Issue #28)
 
----
-
-## 🎯 Priority Fix List
-
-1. **Fix XSS vulnerabilities** (Critical)
-2. **Remove deprecated execCommand** (High)
-3. **Fix pattern count mismatch** (High)
-4. **Add event listener cleanup** (High)
-5. **Fix translation key inconsistencies** (Medium)
-6. **Add input validation** (Medium)
-7. **Remove console.log statements** (Low)
-8. **Add JSDoc comments** (Low)
+### 📋 Nice to Have (Low Priority)
+1. **Remove/wrap console.log statements** (Issue #11)
+2. **Replace magic numbers with constants** (Issue #12)
+3. **Standardize naming conventions** (Issue #14)
+4. **Add JSDoc comments** (Issue #15)
+5. **Improve text replacement for multi-node spans** (Issue #17)
+6. **Add Content Security Policy** (Issue #24)
 
 ---
 
-## 📊 Overall Assessment
+## 📊 Updated Overall Assessment
 
-**Code Quality:** 7/10
-- Well-structured and modular
-- Good separation of concerns
-- Needs security hardening
-- Needs better error handling
-
-**Security:** 6/10
-- XSS vulnerabilities present
-- Good use of escaping in some places
-- Needs comprehensive security review
-
-**Performance:** 8/10
-- Good use of debouncing
-- Efficient pattern matching for most cases
-- Some optimization opportunities
-
-**Maintainability:** 7/10
-- Clear code structure
-- Some duplication
-- Missing documentation
-- Inconsistent patterns
+**Code Quality:** 8.5/10  
+**Security:** 9/10  
+**Performance:** 8/10  
+**Maintainability:** 8/10
 
 ---
 
 ## 🔧 Recommended Next Steps
 
-1. **Immediate:** Fix XSS vulnerabilities
-2. **Short-term:** Remove deprecated APIs, fix pattern count
-3. **Medium-term:** Add tests, improve error handling
-4. **Long-term:** Consider TypeScript migration, add comprehensive docs
+### Immediate (Optional)
+1. Fix null reference in `getOwnPropertyDescriptor` (Issue #10)
+2. Extract duplicate replacement logic (Issue #13)
 
+### Short-term
+1. Add unit tests for core functionality
+2. Wrap console.log statements in debug flag
+3. Replace magic numbers with named constants
+
+### Medium-term
+1. Add JSDoc comments for public APIs
+2. Improve text replacement for edge cases
+3. Add Content Security Policy
+
+### Long-term
+1. Consider TypeScript migration for type safety
+2. Add integration tests
+3. Performance profiling and optimization if needed
+
+---
+
+## 📝 Summary
+
+The remaining issues are primarily code quality improvements, robustness, and best practices rather than functional blockers. Addressing them will further harden the extension and improve long-term maintainability and developer experience.
