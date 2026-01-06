@@ -114,8 +114,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
 
             if (languageChanged && LexGuard.ui && LexGuard.ui.banner && LexGuard.ui.banner.classList.contains('visible')) {
                 const items = LexGuard.scanner.detectedItems;
-                LexGuard.ui.banner.remove();
-                LexGuard.ui.banner = null;
+
+                // Use destroyBanner if available so we also clean up global listeners
+                if (typeof LexGuard.ui.destroyBanner === 'function') {
+                    LexGuard.ui.destroyBanner();
+                } else {
+                    LexGuard.ui.banner.remove();
+                    LexGuard.ui.banner = null;
+                }
+
                 LexGuard.ui.createBanner();
                 if (items.length > 0) {
                     LexGuard.ui.showBanner(items);

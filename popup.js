@@ -7,7 +7,8 @@ const TRANSLATIONS = {
         soundLabel: 'Sound alert',
         keyLabel: 'API Key',
         keyPlaceholder: 'Enter your API key',
-        detectingTitle: 'Detecting (7 patterns)',
+        detectingTitle: 'Detecting',
+        detectingPatternsLabel: 'patterns',
         high: 'High',
         medium: 'Medium',
         patterns: {
@@ -30,7 +31,8 @@ const TRANSLATIONS = {
         soundLabel: 'ხმოვანი სიგნალი',
         keyLabel: 'API გასაღები',
         keyPlaceholder: 'შეიყვანეთ API გასაღები',
-        detectingTitle: 'აღმოჩენა (7 შაბლონი)',
+        detectingTitle: 'აღმოჩენა',
+        detectingPatternsLabel: 'შაბლონი',
         high: 'მაღალი',
         medium: 'საშუალო',
         patterns: {
@@ -47,6 +49,7 @@ const TRANSLATIONS = {
     }
 };
 
+// Keep this list in sync with `LexGuard.PATTERNS` in patterns.js
 const PATTERNS = [
     { key: 'ssn', icon: '🔐', severity: 'high' },
     { key: 'georgianId', icon: '🇬🇪', severity: 'high' },
@@ -54,7 +57,8 @@ const PATTERNS = [
     { key: 'iban', icon: '🏦', severity: 'high' },
     { key: 'passport', icon: '🛂', severity: 'high' },
     { key: 'email', icon: '📧', severity: 'medium' },
-    { key: 'phone', icon: '📱', severity: 'medium' }
+    { key: 'phone', icon: '📱', severity: 'medium' },
+    { key: 'georgianCompanyId', icon: '🏢', severity: 'high' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -107,6 +111,7 @@ const saveSettings = async () => {
 
 const renderUI = () => {
     const t = TRANSLATIONS[currentSettings.language];
+    const patternCount = PATTERNS.length;
 
     const statusLabel = document.getElementById('status-label');
     if (statusLabel) statusLabel.textContent = t.statusLabel;
@@ -130,7 +135,9 @@ const renderUI = () => {
     if (keyInput) keyInput.placeholder = t.keyPlaceholder;
 
     const detectingTitle = document.getElementById('detecting-title');
-    if (detectingTitle) detectingTitle.textContent = t.detectingTitle;
+    if (detectingTitle) {
+        detectingTitle.textContent = `${t.detectingTitle} (${patternCount} ${t.detectingPatternsLabel})`;
+    }
 
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === currentSettings.language);

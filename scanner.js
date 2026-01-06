@@ -12,24 +12,71 @@ LexGuard.scanner = {
 
     // ALERT SOUND
     playAlertSound: function () {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+
+        // Gracefully handle browsers/environments without Web Audio support
+        if (!AudioContextCtor) {
+            console.warn('LexGuard: Web Audio API not supported, disabling sound alerts');
+            if (LexGuard.SETTINGS) {
+                LexGuard.SETTINGS.soundAlert = false;
+            }
+            return;
+        }
+
+        const playTone = (audioContext) => {
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(
+                    0.01,
+                    audioContext.currentTime + 0.2
+                );
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (e) {
+                console.warn('LexGuard: Could not play alert tone', e);
+            }
+        };
+
         try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            // Reuse a single AudioContext if possible to avoid resource issues
+            if (!LexGuard._audioContext) {
+                LexGuard._audioContext = new AudioContextCtor();
+            }
+            const audioContext = LexGuard._audioContext;
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.2);
+            // Some browsers require a user gesture before audio can play.
+            // If the context is suspended, try to resume it and handle failure.
+            if (audioContext.state === 'suspended' && typeof audioContext.resume === 'function') {
+                audioContext.resume()
+                    .then(() => {
+                        if (audioContext.state === 'running') {
+                            playTone(audioContext);
+                        }
+                    })
+                    .catch((e) => {
+                        console.warn('LexGuard: Audio context resume failed, disabling sound alerts', e);
+                        if (LexGuard.SETTINGS) {
+                            LexGuard.SETTINGS.soundAlert = false;
+                        }
+                    });
+            } else {
+                playTone(audioContext);
+            }
         } catch (e) {
-            console.warn('LexGuard: Could not play sound', e);
+            console.warn('LexGuard: Could not initialize audio context, disabling sound alerts', e);
+            if (LexGuard.SETTINGS) {
+                LexGuard.SETTINGS.soundAlert = false;
+            }
         }
     },
 
@@ -47,8 +94,19 @@ LexGuard.scanner = {
         const ignoreValues = LexGuard.IGNORE_VALUES || new Set();
 
         for (const [key, config] of Object.entries(patterns)) {
-            config.pattern.lastIndex = 0;
-            const matches = text.match(config.pattern);
+            // Always work on a fresh RegExp instance so we never depend on or
+            // mutate shared global-regex state (lastIndex, etc.)
+            const basePattern = config.pattern;
+            const pattern = basePattern && basePattern.global
+                ? new RegExp(basePattern.source, basePattern.flags)
+                : basePattern;
+
+            if (!pattern) {
+                continue;
+            }
+
+            pattern.lastIndex = 0;
+            const matches = text.match(pattern);
 
             if (matches) {
                 [...new Set(matches)].forEach(match => {
@@ -194,16 +252,26 @@ LexGuard.scanner = {
 
             requestAnimationFrame(() => {
                 if (input.contentEditable === 'true' || input.isContentEditable) {
+                    // ContentEditable branch: directly replace contents instead of using deprecated execCommand
                     input.focus();
 
+                    // Replace entire contents
+                    while (input.firstChild) {
+                        input.removeChild(input.firstChild);
+                    }
+                    input.appendChild(document.createTextNode(text));
+
+                    // Move caret to end
                     const selection = window.getSelection();
-                    const range = document.createRange();
-                    range.selectNodeContents(input);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    if (selection) {
+                        const range = document.createRange();
+                        range.selectNodeContents(input);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
 
-                    document.execCommand('insertText', false, text);
-
+                    // Notify underlying app (ChatGPT/Gemini) about the change
                     input.dispatchEvent(new InputEvent('input', {
                         bubbles: true,
                         cancelable: true,
@@ -225,66 +293,52 @@ LexGuard.scanner = {
         });
     },
 
-    // REPLACE FUNCTIONS
-    replaceItem: async function (index, action) {
+    /**
+     * Validate replace action to guard against unexpected input values.
+     * Only known safe actions are allowed to proceed.
+     */
+    _isValidReplaceAction: function (action) {
+        const allowedActions = ['placeholder', 'delete'];
+        if (!allowedActions.includes(action)) {
+            console.warn('LexGuard: Invalid replace action received', action);
+            return false;
+        }
+        return true;
+    },
+
+    // Ensure only one replace operation runs at a time
+    runExclusive: async function (fn) {
         if (this.isProcessing) return;
 
-        const item = this.detectedItems[index];
-        if (!item) {
-            console.warn('LexGuard: Item not found at index', index);
+        this.isProcessing = true;
+        LexGuard.ui.showLoading();
+
+        try {
+            await fn();
+        } finally {
+            LexGuard.ui.hideLoading();
+            this.isProcessing = false;
+        }
+    },
+
+    // REPLACE FUNCTIONS
+    replaceItem: async function (index, action) {
+        if (!this._isValidReplaceAction(action)) {
             return;
         }
 
-        this.isProcessing = true;
-        LexGuard.ui.showLoading();
+        await this.runExclusive(async () => {
+            const item = this.detectedItems[index];
+            if (!item) {
+                console.warn('LexGuard: Item not found at index', index);
+                return;
+            }
 
-        await new Promise(r => setTimeout(r, 50));
+            await new Promise(r => setTimeout(r, 50));
 
-        const t = LexGuard.t;
-        let replacement = '';
-
-        switch (action) {
-            case 'placeholder':
-                replacement = item.placeholder;
-                break;
-            case 'delete':
-                replacement = '';
-                break;
-        }
-
-        const success = this.replaceInDOM(item.value, replacement);
-
-        if (!success) {
-            const currentText = this.getInputText();
-            const newText = currentText.split(item.value).join(replacement);
-            await this.setInputTextFallback(newText);
-        }
-
-        await new Promise(r => setTimeout(r, 50));
-
-        const patternName = t(`patterns.${item.type}`) || item.name;
-        this.detectedItems = this.detectedItems.filter((_, i) => i !== index);
-
-        LexGuard.ui.removeItem(index);
-        LexGuard.ui.hideLoading();
-        this.isProcessing = false;
-
-        this.showReplaceFeedback(patternName, action);
-    },
-
-    replaceAll: async function (action) {
-        if (this.isProcessing) return;
-
-        this.isProcessing = true;
-        LexGuard.ui.showLoading();
-
-        await new Promise(r => setTimeout(r, 50));
-
-        const t = LexGuard.t;
-        let allSuccess = true;
-
-        for (const item of this.detectedItems) {
+            const t = LexGuard.t;
             let replacement = '';
+
             switch (action) {
                 case 'placeholder':
                     replacement = item.placeholder;
@@ -295,14 +349,36 @@ LexGuard.scanner = {
             }
 
             const success = this.replaceInDOM(item.value, replacement);
+
             if (!success) {
-                allSuccess = false;
+                const currentText = this.getInputText();
+                const newText = currentText.split(item.value).join(replacement);
+                await this.setInputTextFallback(newText);
             }
+
+            await new Promise(r => setTimeout(r, 50));
+
+            const patternName = t(`patterns.${item.type}`) || item.name;
+            this.detectedItems = this.detectedItems.filter((_, i) => i !== index);
+
+            LexGuard.ui.removeItem(index);
+
+            this.showReplaceFeedback(patternName, action);
+        });
+    },
+
+    replaceAll: async function (action) {
+        if (!this._isValidReplaceAction(action)) {
+            return;
         }
 
-        if (!allSuccess) {
-            let currentText = this.getInputText();
-            this.detectedItems.forEach(item => {
+        await this.runExclusive(async () => {
+            await new Promise(r => setTimeout(r, 50));
+
+            const t = LexGuard.t;
+            let allSuccess = true;
+
+            for (const item of this.detectedItems) {
                 let replacement = '';
                 switch (action) {
                     case 'placeholder':
@@ -312,23 +388,40 @@ LexGuard.scanner = {
                         replacement = '';
                         break;
                 }
-                currentText = currentText.split(item.value).join(replacement);
-            });
-            await this.setInputTextFallback(currentText);
-        }
 
-        await new Promise(r => setTimeout(r, 50));
+                const success = this.replaceInDOM(item.value, replacement);
+                if (!success) {
+                    allSuccess = false;
+                }
+            }
 
-        this.detectedItems = [];
+            if (!allSuccess) {
+                let currentText = this.getInputText();
+                this.detectedItems.forEach(item => {
+                    let replacement = '';
+                    switch (action) {
+                        case 'placeholder':
+                            replacement = item.placeholder;
+                            break;
+                        case 'delete':
+                            replacement = '';
+                            break;
+                    }
+                    currentText = currentText.split(item.value).join(replacement);
+                });
+                await this.setInputTextFallback(currentText);
+            }
 
-        LexGuard.ui.hideBanner();
-        this.unblockSendButton();
-        this.hasShaken = false;
+            await new Promise(r => setTimeout(r, 50));
 
-        LexGuard.ui.hideLoading();
-        this.isProcessing = false;
+            this.detectedItems = [];
 
-        this.showReplaceFeedback(t('allItems'), action);
+            LexGuard.ui.hideBanner();
+            this.unblockSendButton();
+            this.hasShaken = false;
+
+            this.showReplaceFeedback(t('allItems'), action);
+        });
     },
 
     showReplaceFeedback: function (itemName, action) {
@@ -337,6 +430,11 @@ LexGuard.scanner = {
             'placeholder': `${t('replacedWith')} ${t('placeholder')}`,
             'delete': t('deleted')
         };
+
+        if (!actionText[action]) {
+            console.warn('LexGuard: Unknown replace action for feedback', action);
+            return;
+        }
 
         LexGuard.ui.showToast(`✓ ${itemName} ${actionText[action]}`);
     },
