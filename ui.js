@@ -245,10 +245,11 @@ LexGuard.ui = {
             row.className = `lexguard-item severity-${item.severity}`;
             row.dataset.index = index;
 
-            // Escape all user-controlled data
-            const patternName = LexGuard.utils.escapeHtml(t(`patterns.${item.type}`) || item.name);
-            const maskedValue = LexGuard.utils.maskValue(item.value);
-            const escapedValue = LexGuard.utils.escapeHtml(item.value);
+            // Escape all user-controlled data where needed for attributes; use raw values for
+            // dataset and textContent so masking and display lengths remain correct.
+            const rawValue = item.value;
+            const patternName = t(`patterns.${item.type}`) || item.name;
+            const maskedValue = LexGuard.utils.maskValue(rawValue);
 
             // Use structured DOM APIs plus static SVG icon map to avoid XSS
             const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
@@ -269,7 +270,9 @@ LexGuard.ui = {
             const valueSpan = document.createElement('span');
             valueSpan.className = 'lexguard-item-value';
             valueSpan.dataset.masked = 'true';
-            valueSpan.dataset.original = escapedValue;
+            // Store the original unescaped value so reveal/mask operations work with the correct
+            // string length and users never see HTML entities; textContent keeps it safe in the DOM.
+            valueSpan.dataset.original = rawValue;
             valueSpan.textContent = maskedValue;
 
             const eyeBtn = document.createElement('button');
@@ -314,11 +317,12 @@ LexGuard.ui = {
                 const original = valueEl.dataset.original;
 
                 if (isMasked) {
-                    // Safe: original is already escaped when stored
+                    // Reveal original raw value; textContent handles escaping for safe display.
                     valueEl.textContent = original;
                     valueEl.dataset.masked = 'false';
                     valueEl.classList.add('revealed');
                 } else {
+                    // Re-mask using the original raw value so masking length is correct.
                     valueEl.textContent = LexGuard.utils.maskValue(original);
                     valueEl.dataset.masked = 'true';
                     valueEl.classList.remove('revealed');
