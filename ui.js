@@ -65,8 +65,11 @@ LexGuard.ui = {
         el.innerHTML = `
             <div class="lexguard-content">
                 <div class="lexguard-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="11" width="18" height="11"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                        <path d="M12 17.5V19"/>
                     </svg>
                 </div>
                 <div class="lexguard-text">
@@ -76,7 +79,11 @@ LexGuard.ui = {
                 <button class="lexguard-btn" id="lexguard-show">${t('details')}</button>
                 <button class="lexguard-btn lexguard-btn-replace" id="lexguard-replace-all">${t('replaceAll')}</button>
                 <button class="lexguard-btn lexguard-btn-review" id="lexguard-review">${t('reviewed')}</button>
-                <button class="lexguard-close" id="lexguard-close">×</button>
+                <button class="lexguard-close" id="lexguard-close">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
             <div class="lexguard-details" id="lexguard-details"></div>
         `;
@@ -196,6 +203,19 @@ LexGuard.ui = {
         if (!this.banner) this.createBanner();
         const t = LexGuard.t;
 
+        // SVG icons for each pattern type
+        const ITEM_ICONS = {
+            website: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+            ssn: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="14" y2="16"/></svg>',
+            georgianId: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><circle cx="12" cy="10" r="3"/><path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg>',
+            creditCard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+            iban: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><path d="M9 22v-4h6v4"/></svg>',
+            passport: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+            email: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><path d="M22 6l-10 7L2 6"/></svg>',
+            phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+            georgianCompanyId: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><path d="M9 22v-4h6v4"/></svg>'
+        };
+
         const highCount = items.filter(i => i.severity === 'high').length;
         const mediumCount = items.filter(i => i.severity === 'medium').length;
 
@@ -229,7 +249,9 @@ LexGuard.ui = {
             const patternName = LexGuard.utils.escapeHtml(t(`patterns.${item.type}`) || item.name);
             const maskedValue = LexGuard.utils.maskValue(item.value);
             const escapedValue = LexGuard.utils.escapeHtml(item.value);
-            const escapedIcon = LexGuard.utils.escapeHtml(item.icon || '');
+
+            // Use structured DOM APIs plus static SVG icon map to avoid XSS
+            const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
             const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
             const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
             const escapedSeverity = LexGuard.utils.escapeHtml(item.severity === 'high' ? t('high') : t('medium'));
@@ -237,7 +259,8 @@ LexGuard.ui = {
             // Create elements safely using DOM methods
             const iconSpan = document.createElement('span');
             iconSpan.className = 'lexguard-item-icon';
-            iconSpan.textContent = escapedIcon;
+            // iconSvg comes from a trusted static map, so innerHTML here is safe
+            iconSpan.innerHTML = iconSvg;
 
             const typeSpan = document.createElement('span');
             typeSpan.className = 'lexguard-item-type';

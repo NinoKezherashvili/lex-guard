@@ -1,6 +1,7 @@
 var LexGuard = window.LexGuard || {};
 
 LexGuard.LANG = 'en';
+LexGuard.languageReady = false;
 
 LexGuard.TRANSLATIONS = {
     en: {
@@ -23,6 +24,7 @@ LexGuard.TRANSLATIONS = {
         showHideValue: 'Show/Hide value',
         replace: 'Replace',
         patterns: {
+            website: 'Website URL',
             ssn: 'SSN / National ID',
             georgianId: 'Georgian Personal ID',
             creditCard: 'Credit Card',
@@ -54,6 +56,7 @@ LexGuard.TRANSLATIONS = {
         showHideValue: 'მნიშვნელობის ჩვენება/დამალვა',
         replace: 'ჩანაცვლება',
         patterns: {
+            website: 'ვებსაიტის მისამართი',
             ssn: 'SSN / პირადი ნომერი',
             georgianId: 'საქართველოს პირადი ნომერი',
             creditCard: 'საკრედიტო ბარათი',
@@ -91,12 +94,60 @@ LexGuard.t = function (key) {
     return value || key;
 };
 
-LexGuard.utils.getStorage(['language']).then((result) => {
-    if (result.language) {
-        LexGuard.LANG = result.language;
-    }
-});
+// Helper to refresh banner with current language
+LexGuard.refreshBannerLanguage = function () {
+    if (LexGuard.ui) {
+        const items = LexGuard.scanner ? LexGuard.scanner.detectedItems : [];
+        const wasVisible = LexGuard.ui.banner && LexGuard.ui.banner.classList.contains('visible');
 
+        if (LexGuard.ui.banner) {
+            LexGuard.ui.banner.remove();
+            LexGuard.ui.banner = null;
+        }
+
+        if (LexGuard.ui.replaceMenu) {
+            LexGuard.ui.replaceMenu.remove();
+            LexGuard.ui.replaceMenu = null;
+        }
+
+        if (LexGuard.ui.tooltip) {
+            LexGuard.ui.tooltip.remove();
+            LexGuard.ui.tooltip = null;
+        }
+
+        if (LexGuard.ui.loadingOverlay) {
+            LexGuard.ui.loadingOverlay.remove();
+            LexGuard.ui.loadingOverlay = null;
+        }
+
+        LexGuard.ui.createBanner();
+        LexGuard.ui.createTooltip();
+        LexGuard.ui.createLoadingOverlay();
+
+        if (wasVisible && items.length > 0) {
+            LexGuard.ui.showBanner(items);
+        }
+    }
+};
+
+(function initLanguage() {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['language'], (result) => {
+            if (result.language) {
+                LexGuard.LANG = result.language;
+            }
+            LexGuard.languageReady = true;
+
+            if (LexGuard.ui && LexGuard.ui.banner && LexGuard.ui.banner.classList.contains('visible')) {
+                LexGuard.refreshBannerLanguage();
+            }
+        });
+    } else {
+        LexGuard.languageReady = true;
+    }
+})();
+
+// Listen for language/settings changes from popup
 if (typeof chrome !== 'undefined' && chrome.runtime) {
     try {
         chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -112,21 +163,8 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
                 languageChanged = true;
             }
 
-            if (languageChanged && LexGuard.ui && LexGuard.ui.banner && LexGuard.ui.banner.classList.contains('visible')) {
-                const items = LexGuard.scanner.detectedItems;
-
-                // Use destroyBanner if available so we also clean up global listeners
-                if (typeof LexGuard.ui.destroyBanner === 'function') {
-                    LexGuard.ui.destroyBanner();
-                } else {
-                    LexGuard.ui.banner.remove();
-                    LexGuard.ui.banner = null;
-                }
-
-                LexGuard.ui.createBanner();
-                if (items.length > 0) {
-                    LexGuard.ui.showBanner(items);
-                }
+            if (languageChanged) {
+                LexGuard.refreshBannerLanguage();
             }
 
             return true;
