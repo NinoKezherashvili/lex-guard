@@ -5,6 +5,7 @@ LexGuard.ui = {
     tooltip: null,
     replaceMenu: null,
     loadingOverlay: null,
+    _documentClickHandler: null,
 
     init: function () {
         this.createBanner();
@@ -147,9 +148,9 @@ LexGuard.ui = {
             }
         });
 
-        // Close menu on outside click 
-        setTimeout(() => {
-            document.addEventListener('click', (e) => {
+        // Close menu on outside click (single global handler, avoid leaks)
+        if (!this._documentClickHandler) {
+            this._documentClickHandler = (e) => {
                 const isOnMenu = e.target.closest('.lexguard-replace-menu');
                 const isOnReplaceAllBtn = e.target.closest('.lexguard-btn-replace');
                 const isOnItemReplaceBtn = e.target.closest('.lexguard-item-replace');
@@ -157,8 +158,45 @@ LexGuard.ui = {
                 if (!isOnMenu && !isOnReplaceAllBtn && !isOnItemReplaceBtn) {
                     this.hideReplaceMenu();
                 }
-            });
-        }, 100);
+            };
+
+            // Small delay so initial clicks that created the menu don't immediately close it
+            setTimeout(() => {
+                document.addEventListener('click', this._documentClickHandler);
+            }, 100);
+        }
+    },
+
+    // Completely remove banner and global listeners (used on language change)
+    destroyBanner: function () {
+        if (this._documentClickHandler) {
+            document.removeEventListener('click', this._documentClickHandler);
+            this._documentClickHandler = null;
+        }
+
+        if (this.banner) {
+            this.banner.remove();
+            this.banner = null;
+        }
+
+        if (this.replaceMenu) {
+            this.replaceMenu.remove();
+            this.replaceMenu = null;
+        }
+    },
+
+    // Helper function to safely set text content (prevents XSS)
+    _safeSetText: function (element, text) {
+        if (element) {
+            element.textContent = text;
+        }
+    },
+
+    // Helper function to safely set HTML attribute (prevents XSS)
+    _safeSetAttribute: function (element, attr, value) {
+        if (element && value) {
+            element.setAttribute(attr, LexGuard.utils.escapeHtml(value));
+        }
     },
 
     showBanner: function (items) {
@@ -183,66 +221,115 @@ LexGuard.ui = {
 
         const countEl = document.getElementById('lexguard-count');
         if (countEl) {
-            countEl.innerHTML = `<span class="high-count">${highCount} ${t('high')}</span> · <span class="medium-count">${mediumCount} ${t('medium')}</span>`;
+            // Fix XSS: Use DOM methods instead of innerHTML
+            countEl.textContent = ''; // Clear first
+            const highSpan = document.createElement('span');
+            highSpan.className = 'high-count';
+            highSpan.textContent = `${highCount} ${t('high')}`;
+            const separator = document.createTextNode(' · ');
+            const mediumSpan = document.createElement('span');
+            mediumSpan.className = 'medium-count';
+            mediumSpan.textContent = `${mediumCount} ${t('medium')}`;
+            countEl.appendChild(highSpan);
+            countEl.appendChild(separator);
+            countEl.appendChild(mediumSpan);
         }
 
         const detailsEl = document.getElementById('lexguard-details');
         if (!detailsEl) return;
 
-        detailsEl.innerHTML = '';
+        detailsEl.textContent = ''; // Clear safely
 
         items.forEach((item, index) => {
             const row = document.createElement('div');
             row.className = `lexguard-item severity-${item.severity}`;
             row.dataset.index = index;
 
+            // Escape all user-controlled data where needed for attributes; use raw values for
+            // dataset and textContent so masking and display lengths remain correct.
+            const rawValue = item.value;
             const patternName = t(`patterns.${item.type}`) || item.name;
-            const maskedValue = LexGuard.utils.maskValue(item.value);
-            const escapedValue = LexGuard.utils.escapeHtml(item.value);
-            const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
+            const maskedValue = LexGuard.utils.maskValue(rawValue);
 
-            row.innerHTML = `
-                <span class="lexguard-item-icon">${iconSvg}</span>
-                <span class="lexguard-item-type">${patternName}</span>
-                <span class="lexguard-item-value" data-masked="true" data-original="${escapedValue}">${maskedValue}</span>
-                <button class="lexguard-eye" title="${t('showHideValue')}">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                </button>
-                <button class="lexguard-item-replace" title="${t('replace')}">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M17 1l4 4-4 4"/>
-                        <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                        <path d="M7 23l-4-4 4-4"/>
-                        <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                    </svg>
-                </button>
-                <span class="lexguard-item-severity">${item.severity === 'high' ? t('high') : t('medium')}</span>
+            // Use structured DOM APIs plus static SVG icon map to avoid XSS
+            const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
+            const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
+            const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
+            const escapedSeverity = LexGuard.utils.escapeHtml(item.severity === 'high' ? t('high') : t('medium'));
+
+            // Create elements safely using DOM methods
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'lexguard-item-icon';
+            // iconSvg comes from a trusted static map, so innerHTML here is safe
+            iconSpan.innerHTML = iconSvg;
+
+            const typeSpan = document.createElement('span');
+            typeSpan.className = 'lexguard-item-type';
+            typeSpan.textContent = patternName;
+
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'lexguard-item-value';
+            valueSpan.dataset.masked = 'true';
+            // Store the original unescaped value so reveal/mask operations work with the correct
+            // string length and users never see HTML entities; textContent keeps it safe in the DOM.
+            valueSpan.dataset.original = rawValue;
+            valueSpan.textContent = maskedValue;
+
+            const eyeBtn = document.createElement('button');
+            eyeBtn.className = 'lexguard-eye';
+            eyeBtn.setAttribute('title', escapedShowHide);
+            eyeBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
             `;
 
-            // Eye button - toggle mask
-            const eyeBtn = row.querySelector('.lexguard-eye');
-            const valueEl = row.querySelector('.lexguard-item-value');
+            const replaceBtn = document.createElement('button');
+            replaceBtn.className = 'lexguard-item-replace';
+            replaceBtn.setAttribute('title', escapedReplace);
+            replaceBtn.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 1l4 4-4 4"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <path d="M7 23l-4-4 4-4"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+            `;
+
+            const severitySpan = document.createElement('span');
+            severitySpan.className = 'lexguard-item-severity';
+            severitySpan.textContent = escapedSeverity;
+
+            // Append all elements
+            row.appendChild(iconSpan);
+            row.appendChild(typeSpan);
+            row.appendChild(valueSpan);
+            row.appendChild(eyeBtn);
+            row.appendChild(replaceBtn);
+            row.appendChild(severitySpan);
+
+            // Eye button - toggle mask (already created above, just get reference)
+            const valueEl = valueSpan;
 
             eyeBtn.addEventListener('click', () => {
                 const isMasked = valueEl.dataset.masked === 'true';
                 const original = valueEl.dataset.original;
 
                 if (isMasked) {
+                    // Reveal original raw value; textContent handles escaping for safe display.
                     valueEl.textContent = original;
                     valueEl.dataset.masked = 'false';
                     valueEl.classList.add('revealed');
                 } else {
+                    // Re-mask using the original raw value so masking length is correct.
                     valueEl.textContent = LexGuard.utils.maskValue(original);
                     valueEl.dataset.masked = 'true';
                     valueEl.classList.remove('revealed');
                 }
             });
 
-            // Replace button
-            const replaceBtn = row.querySelector('.lexguard-item-replace');
+            // Replace button (already created above)
             replaceBtn.addEventListener('click', (e) => {
                 if (LexGuard.scanner.isProcessing) return;
                 console.log('LexGuard: Item replace button clicked, index:', index);
@@ -322,12 +409,22 @@ LexGuard.ui = {
                 el.dataset.index = i;
             });
 
-            // Update count
+            // Update count (fix XSS: use DOM methods)
             const highCount = items.filter(i => i.severity === 'high').length;
             const mediumCount = items.filter(i => i.severity === 'medium').length;
             const countEl = document.getElementById('lexguard-count');
             if (countEl) {
-                countEl.innerHTML = `<span class="high-count">${highCount} ${t('high')}</span> · <span class="medium-count">${mediumCount} ${t('medium')}</span>`;
+                countEl.textContent = '';
+                const highSpan = document.createElement('span');
+                highSpan.className = 'high-count';
+                highSpan.textContent = `${highCount} ${t('high')}`;
+                const separator = document.createTextNode(' · ');
+                const mediumSpan = document.createElement('span');
+                mediumSpan.className = 'medium-count';
+                mediumSpan.textContent = `${mediumCount} ${t('medium')}`;
+                countEl.appendChild(highSpan);
+                countEl.appendChild(separator);
+                countEl.appendChild(mediumSpan);
             }
         }
     },

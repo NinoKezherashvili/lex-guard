@@ -7,7 +7,8 @@ const TRANSLATIONS = {
         soundLabel: 'Sound alert',
         keyLabel: 'API Key',
         keyPlaceholder: 'Enter your API key',
-        detectingTitle: 'Detecting (6 patterns)',
+        detectingTitle: 'Detecting',
+        detectingPatternsLabel: 'patterns',
         high: 'High',
         medium: 'Medium',
         patterns: {
@@ -27,7 +28,8 @@ const TRANSLATIONS = {
         soundLabel: 'ხმოვანი სიგნალი',
         keyLabel: 'API გასაღები',
         keyPlaceholder: 'შეიყვანეთ API გასაღები',
-        detectingTitle: 'აღმოჩენა (6 შაბლონი)',
+        detectingTitle: 'აღმოჩენა',
+        detectingPatternsLabel: 'შაბლონი',
         high: 'მაღალი',
         medium: 'საშუალო',
         patterns: {
@@ -41,7 +43,7 @@ const TRANSLATIONS = {
     }
 };
 
-// Patterns matching patterns.js - order: high severity first, then medium
+// Patterns matching `LexGuard.PATTERNS` in patterns.js - order: high severity first, then medium
 const PATTERNS = [
     { key: 'georgianId', icon: 'id-badge', severity: 'high' },
     { key: 'georgianCompanyId', icon: 'building', severity: 'high' },
@@ -109,6 +111,7 @@ const saveSettings = async () => {
 
 const renderUI = () => {
     const t = TRANSLATIONS[currentSettings.language];
+    const patternCount = PATTERNS.length;
 
     const statusLabel = document.getElementById('status-label');
     if (statusLabel) statusLabel.textContent = t.statusLabel;
@@ -132,7 +135,9 @@ const renderUI = () => {
     if (keyInput) keyInput.placeholder = t.keyPlaceholder;
 
     const detectingTitle = document.getElementById('detecting-title');
-    if (detectingTitle) detectingTitle.textContent = t.detectingTitle;
+    if (detectingTitle) {
+        detectingTitle.textContent = `${t.detectingTitle} (${patternCount} ${t.detectingPatternsLabel})`;
+    }
 
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === currentSettings.language);
