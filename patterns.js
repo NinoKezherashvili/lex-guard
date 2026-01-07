@@ -104,21 +104,64 @@ LexGuard.SETTINGS = {
     blockSendButton: true  // Cannot be disabled
 };
 
+/**
+ * Validates a single setting value based on its key and expected type.
+ * @param {string} key - Setting key name
+ * @param {*} value - Value to validate
+ * @returns {*} - Validated value or undefined if invalid
+ */
+const validateSetting = (key, value) => {
+    if (value === undefined || value === null) {
+        return undefined;
+    }
+
+    switch (key) {
+        case 'shakeAnimation':
+        case 'soundAlert':
+            return typeof value === 'boolean' ? value : undefined;
+        case 'language':
+            const validLanguages = ['en', 'ka'];
+            return typeof value === 'string' && validLanguages.includes(value) ? value : undefined;
+        default:
+            return undefined;
+    }
+};
+
 if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.local.get(['shakeAnimation', 'soundAlert'], (result) => {
-        if (result.shakeAnimation !== undefined) LexGuard.SETTINGS.shakeAnimation = result.shakeAnimation;
-        if (result.soundAlert !== undefined) LexGuard.SETTINGS.soundAlert = result.soundAlert;
+        if (result) {
+            const validatedShake = validateSetting('shakeAnimation', result.shakeAnimation);
+            if (validatedShake !== undefined) {
+                LexGuard.SETTINGS.shakeAnimation = validatedShake;
+            }
+
+            const validatedSound = validateSetting('soundAlert', result.soundAlert);
+            if (validatedSound !== undefined) {
+                LexGuard.SETTINGS.soundAlert = validatedSound;
+            }
+        }
     });
 }
 
 if (typeof chrome !== 'undefined' && chrome.runtime) {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-        if (msg.type === 'LEXGUARD_SETTINGS' && msg.settings) {
-            if (msg.settings.shakeAnimation !== undefined) LexGuard.SETTINGS.shakeAnimation = msg.settings.shakeAnimation;
-            if (msg.settings.soundAlert !== undefined) LexGuard.SETTINGS.soundAlert = msg.settings.soundAlert;
+        if (msg.type === 'LEXGUARD_SETTINGS' && msg.settings && typeof msg.settings === 'object') {
+            // Validate and set shakeAnimation
+            const validatedShake = validateSetting('shakeAnimation', msg.settings.shakeAnimation);
+            if (validatedShake !== undefined) {
+                LexGuard.SETTINGS.shakeAnimation = validatedShake;
+            }
 
-            if (msg.settings.language) {
-                LexGuard.LANG = msg.settings.language;
+            // Validate and set soundAlert
+            const validatedSound = validateSetting('soundAlert', msg.settings.soundAlert);
+            if (validatedSound !== undefined) {
+                LexGuard.SETTINGS.soundAlert = validatedSound;
+            }
+
+            // Validate and set language
+            const validatedLang = validateSetting('language', msg.settings.language);
+            if (validatedLang !== undefined) {
+                LexGuard.LANG = validatedLang;
             }
         }
         return true;

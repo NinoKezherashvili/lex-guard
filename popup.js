@@ -68,6 +68,51 @@ const DEFAULT_SETTINGS = {
     soundAlert: false
 };
 
+// Valid language codes
+const VALID_LANGUAGES = ['en', 'ka'];
+
+/**
+ * Validates settings object to ensure all values are of correct type and within allowed ranges.
+ * @param {Object} settings - Settings object to validate
+ * @returns {Object} - Validated settings object with only valid properties, merged with defaults
+ */
+const validateSettings = (settings) => {
+    if (!settings || typeof settings !== 'object') {
+        return { ...DEFAULT_SETTINGS };
+    }
+
+    const validated = { ...DEFAULT_SETTINGS };
+
+    // Validate language
+    if (settings.language !== undefined) {
+        if (typeof settings.language === 'string' && VALID_LANGUAGES.includes(settings.language)) {
+            validated.language = settings.language;
+        } else {
+            console.warn('LexGuard: Invalid language value, using default');
+        }
+    }
+
+    // Validate shakeAnimation
+    if (settings.shakeAnimation !== undefined) {
+        if (typeof settings.shakeAnimation === 'boolean') {
+            validated.shakeAnimation = settings.shakeAnimation;
+        } else {
+            console.warn('LexGuard: Invalid shakeAnimation value, using default');
+        }
+    }
+
+    // Validate soundAlert
+    if (settings.soundAlert !== undefined) {
+        if (typeof settings.soundAlert === 'boolean') {
+            validated.soundAlert = settings.soundAlert;
+        } else {
+            console.warn('LexGuard: Invalid soundAlert value, using default');
+        }
+    }
+
+    return validated;
+};
+
 let currentSettings = { ...DEFAULT_SETTINGS };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -81,9 +126,18 @@ const loadSettings = async () => {
 
     try {
         const result = await chrome.storage.local.get(DEFAULT_SETTINGS);
-        currentSettings = { ...DEFAULT_SETTINGS, ...result };
+        // Validate loaded settings before using them
+        currentSettings = validateSettings(result);
+        
+        // If validation changed anything, save the corrected values
+        const originalKeys = Object.keys(result || {});
+        const validatedKeys = Object.keys(currentSettings);
+        if (originalKeys.length > 0 && JSON.stringify(result) !== JSON.stringify(currentSettings)) {
+            await chrome.storage.local.set(currentSettings);
+        }
     } catch (e) {
         console.warn('Storage access failed', e);
+        currentSettings = { ...DEFAULT_SETTINGS };
     }
 };
 
@@ -91,14 +145,18 @@ const saveSettings = async () => {
     if (typeof chrome === 'undefined' || !chrome.storage) return;
 
     try {
-        await chrome.storage.local.set(currentSettings);
+        // Validate settings before saving
+        const validatedSettings = validateSettings(currentSettings);
+        currentSettings = validatedSettings;
+        
+        await chrome.storage.local.set(validatedSettings);
         if (chrome.tabs) {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
             if (tab?.id) {
                 await chrome.tabs.sendMessage(tab.id, {
                     type: 'LEXGUARD_SETTINGS',
-                    settings: currentSettings
+                    settings: validatedSettings
                 }).catch(() => {
                     console.warn('LexGuard: Failed to send message to content script.');
                 });
@@ -164,16 +222,24 @@ const renderUI = () => {
 const setupEventListeners = () => {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            currentSettings.language = btn.dataset.lang;
-            renderUI();
-            saveSettings();
+            const lang = btn.dataset.lang;
+            // Validate language before setting
+            if (VALID_LANGUAGES.includes(lang)) {
+                currentSettings.language = lang;
+                renderUI();
+                saveSettings();
+            } else {
+                console.warn('LexGuard: Invalid language selected:', lang);
+            }
         });
     });
 
     const shakeToggle = document.getElementById('setting-shake');
     if (shakeToggle) {
         shakeToggle.addEventListener('change', () => {
-            currentSettings.shakeAnimation = shakeToggle.checked;
+            // Toggle values are always boolean, but validate anyway
+            const value = !!shakeToggle.checked;
+            currentSettings.shakeAnimation = value;
             saveSettings();
         });
     }
@@ -181,7 +247,9 @@ const setupEventListeners = () => {
     const soundToggle = document.getElementById('setting-sound');
     if (soundToggle) {
         soundToggle.addEventListener('change', () => {
-            currentSettings.soundAlert = soundToggle.checked;
+            // Toggle values are always boolean, but validate anyway
+            const value = !!soundToggle.checked;
+            currentSettings.soundAlert = value;
             saveSettings();
         });
     }

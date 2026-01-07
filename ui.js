@@ -360,9 +360,10 @@ LexGuard.ui = {
 
             // Use structured DOM APIs plus static SVG icon map to avoid XSS
             const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
-            const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
-            const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
-            const escapedSeverity = LexGuard.utils.escapeHtml(item.severity === 'high' ? t('high') : t('medium'));
+            // No need to escape: setAttribute() and textContent() treat content as plain text
+            const showHideText = t('showHideValue');
+            const replaceText = t('replace');
+            const severityText = item.severity === 'high' ? t('high') : t('medium');
 
             // Create elements safely using DOM methods
             const iconSpan = document.createElement('span');
@@ -384,19 +385,22 @@ LexGuard.ui = {
 
             const eyeBtn = document.createElement('button');
             eyeBtn.className = 'lexguard-eye';
-            eyeBtn.setAttribute('title', escapedShowHide);
+            // setAttribute() treats content as plain text, no escaping needed
+            eyeBtn.setAttribute('title', showHideText);
             // Use DOMParser instead of innerHTML to prevent XSS
             this._safeInsertSVG(eyeBtn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>');
 
             const replaceBtn = document.createElement('button');
             replaceBtn.className = 'lexguard-item-replace';
-            replaceBtn.setAttribute('title', escapedReplace);
+            // setAttribute() treats content as plain text, no escaping needed
+            replaceBtn.setAttribute('title', replaceText);
             // Use DOMParser instead of innerHTML to prevent XSS
             this._safeInsertSVG(replaceBtn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>');
 
             const severitySpan = document.createElement('span');
             severitySpan.className = 'lexguard-item-severity';
-            severitySpan.textContent = escapedSeverity;
+            // textContent() treats content as plain text, no escaping needed
+            severitySpan.textContent = severityText;
 
             // Append all elements
             row.appendChild(iconSpan);
