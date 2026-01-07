@@ -28,12 +28,22 @@ LexGuard.ui = {
         const t = LexGuard.t;
         const el = document.createElement('div');
         el.id = 'lexguard-loading';
-        el.innerHTML = `
-            <div class="lexguard-loading-content">
-                <div class="lexguard-spinner"></div>
-                <span class="lexguard-loading-text">${t('replacing')}</span>
-            </div>
-        `;
+        
+        // Use DOM methods instead of innerHTML to prevent XSS
+        const content = document.createElement('div');
+        content.className = 'lexguard-loading-content';
+        
+        const spinner = document.createElement('div');
+        spinner.className = 'lexguard-spinner';
+        
+        const text = document.createElement('span');
+        text.className = 'lexguard-loading-text';
+        text.textContent = t('replacing');
+        
+        content.appendChild(spinner);
+        content.appendChild(text);
+        el.appendChild(content);
+        
         document.body.appendChild(el);
         this.loadingOverlay = el;
     },
@@ -75,31 +85,63 @@ LexGuard.ui = {
 
         const el = document.createElement('div');
         el.id = 'lexguard-banner';
-        el.innerHTML = `
-            <div class="lexguard-content">
-                <div class="lexguard-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="3" y="11" width="18" height="11"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                        <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
-                        <path d="M12 17.5V19"/>
-                    </svg>
-                </div>
-                <div class="lexguard-text">
-                    <span class="lexguard-title">${t('sensitiveDataDetected')}</span>
-                    <span class="lexguard-count" id="lexguard-count">0</span>
-                </div>
-                <button class="lexguard-btn" id="lexguard-show">${t('details')}</button>
-                <button class="lexguard-btn lexguard-btn-replace" id="lexguard-replace-all">${t('replaceAll')}</button>
-                <button class="lexguard-btn lexguard-btn-review" id="lexguard-review">${t('reviewed')}</button>
-                <button class="lexguard-close" id="lexguard-close">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="lexguard-details" id="lexguard-details"></div>
-        `;
+        
+        // Use DOM methods instead of innerHTML to prevent XSS
+        const content = document.createElement('div');
+        content.className = 'lexguard-content';
+        
+        const icon = document.createElement('div');
+        icon.className = 'lexguard-icon';
+        this._safeInsertSVG(icon, '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/><path d="M12 17.5V19"/></svg>');
+        
+        const text = document.createElement('div');
+        text.className = 'lexguard-text';
+        
+        const title = document.createElement('span');
+        title.className = 'lexguard-title';
+        title.textContent = t('sensitiveDataDetected');
+        
+        const count = document.createElement('span');
+        count.className = 'lexguard-count';
+        count.id = 'lexguard-count';
+        count.textContent = '0';
+        
+        text.appendChild(title);
+        text.appendChild(count);
+        
+        const showBtn = document.createElement('button');
+        showBtn.className = 'lexguard-btn';
+        showBtn.id = 'lexguard-show';
+        showBtn.textContent = t('details');
+        
+        const replaceAllBtn = document.createElement('button');
+        replaceAllBtn.className = 'lexguard-btn lexguard-btn-replace';
+        replaceAllBtn.id = 'lexguard-replace-all';
+        replaceAllBtn.textContent = t('replaceAll');
+        
+        const reviewBtn = document.createElement('button');
+        reviewBtn.className = 'lexguard-btn lexguard-btn-review';
+        reviewBtn.id = 'lexguard-review';
+        reviewBtn.textContent = t('reviewed');
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'lexguard-close';
+        closeBtn.id = 'lexguard-close';
+        this._safeInsertSVG(closeBtn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>');
+        
+        content.appendChild(icon);
+        content.appendChild(text);
+        content.appendChild(showBtn);
+        content.appendChild(replaceAllBtn);
+        content.appendChild(reviewBtn);
+        content.appendChild(closeBtn);
+        
+        const details = document.createElement('div');
+        details.className = 'lexguard-details';
+        details.id = 'lexguard-details';
+        
+        el.appendChild(content);
+        el.appendChild(details);
 
         document.body.appendChild(el);
         this.banner = el;
@@ -110,20 +152,30 @@ LexGuard.ui = {
             menuEl = document.createElement('div');
             menuEl.id = 'lexguard-replace-menu';
             menuEl.className = 'lexguard-replace-menu';
-            menuEl.innerHTML = `
-                <div class="lexguard-replace-option" data-action="placeholder">${t('replaceWithPlaceholder')}</div>
-                <div class="lexguard-replace-option" data-action="delete">${t('deleteEntirely')}</div>
-            `;
+            
+            // Use DOM methods instead of innerHTML to prevent XSS
+            const placeholderOption = document.createElement('div');
+            placeholderOption.className = 'lexguard-replace-option';
+            placeholderOption.dataset.action = 'placeholder';
+            placeholderOption.textContent = t('replaceWithPlaceholder');
+            
+            const deleteOption = document.createElement('div');
+            deleteOption.className = 'lexguard-replace-option';
+            deleteOption.dataset.action = 'delete';
+            deleteOption.textContent = t('deleteEntirely');
+            
+            menuEl.appendChild(placeholderOption);
+            menuEl.appendChild(deleteOption);
+            
             document.body.appendChild(menuEl);
         }
         this.replaceMenu = menuEl;
 
         // Event listeners
-        document.getElementById('lexguard-close').addEventListener('click', () => this.hideBanner());
-        document.getElementById('lexguard-show').addEventListener('click', () => this.toggleDetails());
-        document.getElementById('lexguard-review').addEventListener('click', () => LexGuard.scanner.handleReview());
+        closeBtn.addEventListener('click', () => this.hideBanner());
+        showBtn.addEventListener('click', () => this.toggleDetails());
+        reviewBtn.addEventListener('click', () => LexGuard.scanner.handleReview());
 
-        const replaceAllBtn = document.getElementById('lexguard-replace-all');
         replaceAllBtn.addEventListener('click', (e) => {
             if (LexGuard.scanner.isProcessing) return;
             LexGuard.logDebug('LexGuard: Replace All button clicked');
@@ -213,6 +265,37 @@ LexGuard.ui = {
     },
 
     /**
+     * Safely inserts SVG content into an element using DOMParser instead of innerHTML.
+     * This prevents XSS attacks even if the SVG string is modified in the future.
+     * @param {HTMLElement} element - The element to insert SVG into
+     * @param {string} svgString - The SVG string to parse and insert
+     * @returns {void}
+     */
+    _safeInsertSVG: function (element, svgString) {
+        if (!element || !svgString) return;
+
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgString, 'image/svg+xml');
+            const svgElement = doc.documentElement;
+
+            // Check for parsing errors
+            if (svgElement.querySelector('parsererror')) {
+                console.warn('LexGuard: SVG parsing error, falling back to empty element');
+                return;
+            }
+
+            // Clear element and append parsed SVG
+            element.textContent = '';
+            element.appendChild(svgElement);
+        } catch (e) {
+            console.warn('LexGuard: Failed to parse SVG safely', e);
+            // Fallback: clear element to prevent XSS
+            element.textContent = '';
+        }
+    },
+
+    /**
      * Displays the banner with detected sensitive data items.
      * @param {Array<Object>} items - Array of detected items, each containing:
      *   - {string} type - Pattern type key
@@ -284,8 +367,8 @@ LexGuard.ui = {
             // Create elements safely using DOM methods
             const iconSpan = document.createElement('span');
             iconSpan.className = 'lexguard-item-icon';
-            // iconSvg comes from a trusted static map, so innerHTML here is safe
-            iconSpan.innerHTML = iconSvg;
+            // Use DOMParser instead of innerHTML to prevent XSS
+            this._safeInsertSVG(iconSpan, iconSvg);
 
             const typeSpan = document.createElement('span');
             typeSpan.className = 'lexguard-item-type';
@@ -302,24 +385,14 @@ LexGuard.ui = {
             const eyeBtn = document.createElement('button');
             eyeBtn.className = 'lexguard-eye';
             eyeBtn.setAttribute('title', escapedShowHide);
-            eyeBtn.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-            `;
+            // Use DOMParser instead of innerHTML to prevent XSS
+            this._safeInsertSVG(eyeBtn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>');
 
             const replaceBtn = document.createElement('button');
             replaceBtn.className = 'lexguard-item-replace';
             replaceBtn.setAttribute('title', escapedReplace);
-            replaceBtn.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 1l4 4-4 4"/>
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <path d="M7 23l-4-4 4-4"/>
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                </svg>
-            `;
+            // Use DOMParser instead of innerHTML to prevent XSS
+            this._safeInsertSVG(replaceBtn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>');
 
             const severitySpan = document.createElement('span');
             severitySpan.className = 'lexguard-item-severity';
