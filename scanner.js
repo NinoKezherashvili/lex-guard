@@ -236,8 +236,7 @@ LexGuard.scanner = {
 
     /**
      * Replaces text within the DOM while preserving structure.
-     * Handles replacements that might span multiple text nodes by concatenating
-     * all text, performing replacement, then reconstructing the DOM.
+     * Handles replacements that might span multiple text nodes.
      * @param {string} searchValue - The text to find and replace
      * @param {string} replacement - The replacement text
      * @returns {boolean} True if replacement was successful, false otherwise
@@ -248,56 +247,25 @@ LexGuard.scanner = {
 
         // Get all text nodes
         const textNodes = this.getTextNodes(input);
-        if (textNodes.length === 0) return false;
+        let replaced = false;
 
-        // Concatenate all text nodes to handle matches spanning multiple nodes
-        const fullText = textNodes.map(node => node.textContent).join('');
-        
-        // Check if the search value exists in the concatenated text
-        if (!fullText.includes(searchValue)) {
-            return false;
-        }
-
-        // Perform replacement on the concatenated text
-        const replacedText = fullText.split(searchValue).join(replacement);
-
-        // Reconstruct DOM: for contenteditable, replace all text nodes with a single new one
-        // This preserves the parent structure while handling multi-node matches
-        if (input.contentEditable === 'true' || input.isContentEditable) {
-            // Find the first text node's parent to determine insertion point
-            const firstTextNode = textNodes[0];
-            const parentNode = firstTextNode.parentNode;
-
-            // Remove all existing text nodes
-            textNodes.forEach(node => {
-                if (node.parentNode) {
-                    node.parentNode.removeChild(node);
-                }
-            });
-
-            // Insert the replaced text as a single text node at the original position
-            // If parent still has other children, insert before first; otherwise append
-            if (parentNode && parentNode.firstChild) {
-                parentNode.insertBefore(document.createTextNode(replacedText), parentNode.firstChild);
-            } else if (parentNode) {
-                parentNode.appendChild(document.createTextNode(replacedText));
-            } else {
-                // Fallback: if no parent, append to input directly
-                input.appendChild(document.createTextNode(replacedText));
+        // Handle replacements that might span multiple text nodes
+        for (const node of textNodes) {
+            if (node.textContent.includes(searchValue)) {
+                node.textContent = node.textContent.split(searchValue).join(replacement);
+                replaced = true;
             }
-        } else {
-            // For textarea, just set the value directly
-            input.value = replacedText;
         }
 
-        // Dispatch input event to notify the application
-        input.dispatchEvent(new InputEvent('input', {
-            bubbles: true,
-            cancelable: true,
-            inputType: 'insertText'
-        }));
+        if (replaced) {
+            input.dispatchEvent(new InputEvent('input', {
+                bubbles: true,
+                cancelable: true,
+                inputType: 'insertText'
+            }));
+        }
 
-        return true;
+        return replaced;
     },
 
     /**
