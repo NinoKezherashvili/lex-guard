@@ -100,7 +100,7 @@ const saveSettings = async () => {
                     type: 'LEXGUARD_SETTINGS',
                     settings: currentSettings
                 }).catch(() => {
-                    console.log('Failed to send message.')
+                    console.warn('LexGuard: Failed to send message to content script.');
                 });
             }
         }

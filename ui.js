@@ -7,6 +7,11 @@ LexGuard.ui = {
     loadingOverlay: null,
     _documentClickHandler: null,
 
+    /**
+     * Initializes the UI components (banner, tooltip, loading overlay).
+     * Should be called once when the extension loads.
+     * @returns {void}
+     */
     init: function () {
         this.createBanner();
         this.createTooltip();
@@ -33,6 +38,10 @@ LexGuard.ui = {
         this.loadingOverlay = el;
     },
 
+    /**
+     * Shows the loading overlay and disables banner buttons during operations.
+     * @returns {void}
+     */
     showLoading: function () {
         if (!this.loadingOverlay) this.createLoadingOverlay();
         this.loadingOverlay.classList.add('visible');
@@ -42,6 +51,10 @@ LexGuard.ui = {
         buttons.forEach(btn => btn.disabled = true);
     },
 
+    /**
+     * Hides the loading overlay and re-enables banner buttons.
+     * @returns {void}
+     */
     hideLoading: function () {
         if (this.loadingOverlay) {
             this.loadingOverlay.classList.remove('visible');
@@ -113,7 +126,7 @@ LexGuard.ui = {
         const replaceAllBtn = document.getElementById('lexguard-replace-all');
         replaceAllBtn.addEventListener('click', (e) => {
             if (LexGuard.scanner.isProcessing) return;
-            console.log('LexGuard: Replace All button clicked');
+            LexGuard.logDebug('LexGuard: Replace All button clicked');
             e.preventDefault();
             e.stopPropagation();
             this.showReplaceMenu(e, 'all');
@@ -125,7 +138,7 @@ LexGuard.ui = {
 
             const option = e.target.closest('.lexguard-replace-option');
             if (!option) {
-                console.log('LexGuard: Click in menu but not on option');
+                LexGuard.logDebug('LexGuard: Click in menu but not on option');
                 return;
             }
 
@@ -134,16 +147,16 @@ LexGuard.ui = {
 
             const action = option.dataset.action;
             const target = this.replaceMenu.dataset.target;
-            console.log('LexGuard: Replace option clicked', { action, target });
+            LexGuard.logDebug('LexGuard: Replace option clicked', { action, target });
 
             this.hideReplaceMenu();
 
             if (target === 'all') {
-                console.log('LexGuard: Calling replaceAll with action:', action);
+                LexGuard.logDebug('LexGuard: Calling replaceAll with action:', action);
                 LexGuard.scanner.replaceAll(action);
             } else {
                 const index = parseInt(target, 10);
-                console.log('LexGuard: Calling replaceItem with index:', index, 'action:', action);
+                LexGuard.logDebug('LexGuard: Calling replaceItem with index:', index, 'action:', action);
                 LexGuard.scanner.replaceItem(index, action);
             }
         });
@@ -199,6 +212,17 @@ LexGuard.ui = {
         }
     },
 
+    /**
+     * Displays the banner with detected sensitive data items.
+     * @param {Array<Object>} items - Array of detected items, each containing:
+     *   - {string} type - Pattern type key
+     *   - {string} name - Human-readable name
+     *   - {string} icon - Icon identifier
+     *   - {string} severity - 'high' or 'medium'
+     *   - {string} value - The detected sensitive value
+     *   - {string} placeholder - Placeholder text for replacement
+     * @returns {void}
+     */
     showBanner: function (items) {
         if (!this.banner) this.createBanner();
         const t = LexGuard.t;
@@ -332,7 +356,7 @@ LexGuard.ui = {
             // Replace button (already created above)
             replaceBtn.addEventListener('click', (e) => {
                 if (LexGuard.scanner.isProcessing) return;
-                console.log('LexGuard: Item replace button clicked, index:', index);
+                LexGuard.logDebug('LexGuard: Item replace button clicked, index:', index);
                 e.preventDefault();
                 e.stopPropagation();
                 this.showReplaceMenu(e, index.toString());
@@ -349,6 +373,10 @@ LexGuard.ui = {
         }
     },
 
+    /**
+     * Hides the banner and collapses any expanded details.
+     * @returns {void}
+     */
     hideBanner: function () {
         if (this.banner) {
             this.banner.classList.remove('visible');
@@ -357,6 +385,10 @@ LexGuard.ui = {
         }
     },
 
+    /**
+     * Toggles the expanded/collapsed state of the banner details section.
+     * @returns {void}
+     */
     toggleDetails: function () {
         const t = LexGuard.t;
         if (this.banner) {
@@ -370,7 +402,7 @@ LexGuard.ui = {
 
     // REPLACE MENU
     showReplaceMenu: function (e, target) {
-        console.log('LexGuard: showReplaceMenu called', { target, replaceMenu: !!this.replaceMenu });
+        LexGuard.logDebug('LexGuard: showReplaceMenu called', { target, replaceMenu: !!this.replaceMenu });
         if (!this.replaceMenu) {
             console.warn('LexGuard: replaceMenu not found!');
             return;
@@ -381,7 +413,7 @@ LexGuard.ui = {
         this.replaceMenu.style.left = rect.left + 'px';
         this.replaceMenu.dataset.target = target;
         this.replaceMenu.classList.add('visible');
-        console.log('LexGuard: Menu should be visible now');
+        LexGuard.logDebug('LexGuard: Menu should be visible now');
     },
 
     hideReplaceMenu: function () {
@@ -390,6 +422,12 @@ LexGuard.ui = {
         }
     },
 
+    /**
+     * Removes a detected item from the banner display.
+     * Updates item indices and hides banner if no items remain.
+     * @param {number} index - Index of the item to remove
+     * @returns {void}
+     */
     removeItem: function (index) {
         const t = LexGuard.t;
         const item = document.querySelector(`.lexguard-item[data-index="${index}"]`);
@@ -444,6 +482,11 @@ LexGuard.ui = {
         this.tooltip = el;
     },
 
+    /**
+     * Shows a tooltip near the send button when it's blocked.
+     * @param {Event} e - Mouse event containing target element position
+     * @returns {void}
+     */
     showTooltip: function (e) {
         if (this.tooltip) {
             const rect = e.target.getBoundingClientRect();
@@ -453,6 +496,10 @@ LexGuard.ui = {
         }
     },
 
+    /**
+     * Hides the tooltip.
+     * @returns {void}
+     */
     hideTooltip: function () {
         if (this.tooltip) {
             this.tooltip.classList.remove('visible');
@@ -460,6 +507,11 @@ LexGuard.ui = {
     },
 
     // TOAST
+    /**
+     * Displays a temporary toast notification message.
+     * @param {string} message - The message to display
+     * @returns {void}
+     */
     showToast: function (message) {
         let toast = document.getElementById('lexguard-toast');
         if (!toast) {
@@ -476,7 +528,11 @@ LexGuard.ui = {
         }, 2000);
     },
 
-    // SHAKE
+    /**
+     * Applies a shake animation to the input element to draw attention.
+     * Used when sensitive data is detected.
+     * @returns {void}
+     */
     shakeInput: function () {
         const input = document.querySelector('#prompt-textarea') ||
             document.querySelector('rich-textarea') ||
