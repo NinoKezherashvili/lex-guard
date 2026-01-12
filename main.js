@@ -102,7 +102,6 @@
 
         const init = () => {
             const patternCount = Object.keys(LG.PATTERNS).length;
-            console.log(`🛡️ LexGuard: Active on ChatGPT (${patternCount} patterns)`);
 
             LG.ui.init();
             findAndObserveInputs();

@@ -3,82 +3,11 @@ var LexGuard = window.LexGuard || {};
 LexGuard.scanner = {
     isBlocking: false,
     hasShaken: false,
-    hasPlayedSound: false,
     detectedItems: [],
     isProcessing: false,
 
     _tooltipShowHandler: null,
     _tooltipHideHandler: null,
-
-    // ALERT SOUND
-    playAlertSound: function () {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-
-        // Gracefully handle browsers/environments without Web Audio support
-        if (!AudioContextCtor) {
-            console.warn('LexGuard: Web Audio API not supported, disabling sound alerts');
-            if (LexGuard.SETTINGS) {
-                LexGuard.SETTINGS.soundAlert = false;
-            }
-            return;
-        }
-
-        const playTone = (audioContext) => {
-            try {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-
-                oscillator.frequency.value = 800;
-                oscillator.type = 'sine';
-
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(
-                    0.01,
-                    audioContext.currentTime + 0.2
-                );
-
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
-            } catch (e) {
-                console.warn('LexGuard: Could not play alert tone', e);
-            }
-        };
-
-        try {
-            // Reuse a single AudioContext if possible to avoid resource issues
-            if (!LexGuard._audioContext) {
-                LexGuard._audioContext = new AudioContextCtor();
-            }
-            const audioContext = LexGuard._audioContext;
-
-            // Some browsers require a user gesture before audio can play.
-            // If the context is suspended, try to resume it and handle failure.
-            if (audioContext.state === 'suspended' && typeof audioContext.resume === 'function') {
-                audioContext.resume()
-                    .then(() => {
-                        if (audioContext.state === 'running') {
-                            playTone(audioContext);
-                        }
-                    })
-                    .catch((e) => {
-                        console.warn('LexGuard: Audio context resume failed, disabling sound alerts', e);
-                        if (LexGuard.SETTINGS) {
-                            LexGuard.SETTINGS.soundAlert = false;
-                        }
-                    });
-            } else {
-                playTone(audioContext);
-            }
-        } catch (e) {
-            console.warn('LexGuard: Could not initialize audio context, disabling sound alerts', e);
-            if (LexGuard.SETTINGS) {
-                LexGuard.SETTINGS.soundAlert = false;
-            }
-        }
-    },
 
     scanText: function (text) {
         if (!text || text.length < 3) {
@@ -92,8 +21,13 @@ LexGuard.scanner = {
         const found = [];
         const patterns = LexGuard.PATTERNS;
         const ignoreValues = LexGuard.IGNORE_VALUES || new Set();
+        const disabledPatterns = LexGuard.SETTINGS.disabledPatterns || [];
 
         for (const [key, config] of Object.entries(patterns)) {
+            // Skip disabled patterns
+            if (disabledPatterns.includes(key)) {
+                continue;
+            }
             // Always work on a fresh RegExp instance so we never depend on or
             // mutate shared global-regex state (lastIndex, etc.)
             const basePattern = config.pattern;
@@ -171,11 +105,6 @@ LexGuard.scanner = {
                 this.hasShaken = true;
             }
 
-            if (LexGuard.SETTINGS.soundAlert && !this.hasPlayedSound) {
-                this.playAlertSound();
-                this.hasPlayedSound = true;
-            }
-
             if (LexGuard.SETTINGS.blockSendButton) {
                 this.blockSendButton();
             }
@@ -183,7 +112,6 @@ LexGuard.scanner = {
             LexGuard.ui.hideBanner();
             this.unblockSendButton();
             this.hasShaken = false;
-            this.hasPlayedSound = false;
         }
 
         return found;

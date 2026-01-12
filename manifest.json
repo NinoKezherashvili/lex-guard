@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "LexyGuard",
-  "version": "1.0.1",
+  "name": "NyxGuard",
+  "version": "1.0.2",
   "description": "AI Data Protection - Detect and protect sensitive data before sharing with ChatGPT",
   "permissions": ["storage", "activeTab"],
   "icons": {
@@ -21,7 +21,9 @@
       "matches": [
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
-        "https://gemini.google.com/*"
+        "https://gemini.google.com/*",
+        "https://*.chatgpt.com/*",
+        "https://*.openai.com/*"
       ],
       "css": ["content.css"],
       "js": [
@@ -33,6 +35,18 @@
         "main.js"
       ],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/favicon.png", "icons/icon.svg"],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*",
+        "https://*.chatgpt.com/*",
+        "https://*.openai.com/*"
+      ]
     }
   ]
 }

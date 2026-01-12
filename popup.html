@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>LexyGuard</title>
+    <title>NyxGuard</title>
     <style>
       :root {
         --primary: #1c60ff;
@@ -61,6 +61,7 @@
       .lang-switcher {
         display: flex;
         background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
         overflow: hidden;
       }
 
@@ -186,32 +187,19 @@
       .detect-item {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 10px;
         padding: 10px 12px;
-        background: #fafafa;
-        border-left: 3px solid;
+        border: 1px solid var(--grey-border);
+        border-radius: 4px;
       }
 
-      .detect-item.high {
-        border-left-color: var(--high);
-      }
-
-      .detect-item.medium {
-        border-left-color: var(--medium);
-      }
-
-      .detect-icon {
-        width: 20px;
-        height: 20px;
+      .detect-info {
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: #6b7280;
-      }
-
-      .detect-icon svg {
-        width: 16px;
-        height: 16px;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
       }
 
       .detect-name {
@@ -226,6 +214,10 @@
         text-transform: uppercase;
         padding: 3px 6px;
         color: white;
+        border-radius: 4px;
+        min-width: 52px;
+        text-align: center;
+        flex-shrink: 0;
       }
 
       .detect-severity.high {
@@ -234,6 +226,10 @@
 
       .detect-severity.medium {
         background: var(--medium);
+      }
+
+      .detect-item.disabled {
+        opacity: 0.5;
       }
 
       /* Settings */
@@ -257,25 +253,13 @@
         color: #374151;
       }
 
-      .setting-icon {
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6b7280;
-      }
-
-      .setting-icon svg {
-        width: 18px;
-        height: 18px;
-      }
-
+      /* Rounded Toggle */
       .toggle {
         position: relative;
         width: 40px;
         height: 22px;
         cursor: pointer;
+        flex-shrink: 0;
       }
 
       .toggle input {
@@ -291,6 +275,7 @@
         right: 0;
         bottom: 0;
         background: #d1d5db;
+        border-radius: 11px;
         transition: all 0.2s;
       }
 
@@ -302,6 +287,7 @@
         left: 3px;
         bottom: 3px;
         background: white;
+        border-radius: 50%;
         transition: all 0.2s;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
       }
@@ -312,6 +298,27 @@
 
       .toggle input:checked + .toggle-slider::before {
         transform: translateX(18px);
+      }
+
+      /* Small toggle for pattern items */
+      .toggle-sm {
+        width: 32px;
+        height: 18px;
+      }
+
+      .toggle-sm .toggle-slider {
+        border-radius: 9px;
+      }
+
+      .toggle-sm .toggle-slider::before {
+        width: 12px;
+        height: 12px;
+        left: 3px;
+        bottom: 3px;
+      }
+
+      .toggle-sm input:checked + .toggle-slider::before {
+        transform: translateX(14px);
       }
 
       .key-input-wrapper {
@@ -335,6 +342,7 @@
         padding: 10px 12px;
         font-size: 12px;
         border: 1px solid var(--grey-border);
+        border-radius: 4px;
         background: #fafafa;
         color: #374151;
         transition: all 0.15s;
@@ -360,28 +368,13 @@
   <body>
     <div class="header">
       <div class="logo">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-        >
-          <rect
-            x="3"
-            y="11"
-            width="18"
-            height="11"
-          />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          <circle
-            cx="12"
-            cy="16"
-            r="1.5"
-            fill="currentColor"
-          />
-          <path d="M12 17.5V19" />
-        </svg>
-        <span>LexyGuard</span>
+        <img
+          width="24"
+          height="24"
+          src="icons/icon48.png"
+          alt="NyxGuard"
+        />
+        <span>NyxGuard</span>
       </div>
       <div class="lang-switcher">
         <button
@@ -421,22 +414,6 @@
       <div class="settings-list">
         <div class="setting-item">
           <span class="setting-label">
-            <span class="setting-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <rect
-                  x="5"
-                  y="2"
-                  width="14"
-                  height="20"
-                />
-                <path d="M2 8v8M22 8v8" />
-              </svg>
-            </span>
             <span id="shake-label">Shake on detection</span>
           </span>
           <label class="toggle">
@@ -444,29 +421,6 @@
               type="checkbox"
               id="setting-shake"
               checked
-            />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="setting-item">
-          <span class="setting-label">
-            <span class="setting-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </span>
-            <span id="sound-label">Sound alert</span>
-          </span>
-          <label class="toggle">
-            <input
-              type="checkbox"
-              id="setting-sound"
             />
             <span class="toggle-slider"></span>
           </label>
@@ -491,7 +445,7 @@
           class="section-title"
           id="detecting-title"
         >
-          Detecting (7 patterns)
+          Detecting patterns
         </div>
         <div class="section-toggle">
           <svg

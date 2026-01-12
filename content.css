@@ -5,6 +5,7 @@
   --dark: #161616;
   --high: #dc2626;
   --medium: #f59e0b;
+  --low: #6b7280;
   --success: #059669;
 
   position: fixed;
@@ -16,7 +17,12 @@
   transform: translateY(-8px);
   transition: all 0.2s ease;
   pointer-events: none;
-  max-width: 450px;
+  width: 380px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
 #lexguard-banner.visible {
@@ -25,21 +31,32 @@
   pointer-events: all;
 }
 
-.lexguard-content {
+/* ================================
+   SECTION 1: HEADER
+   ================================ */
+.lexguard-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 12px 16px;
+  color: white;
+  background: #161616;
+}
+
+.lexguard-header-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+
 }
 
 .lexguard-icon {
-  width: 36px;
-  height: 36px;
-  background: #161616;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,40 +64,94 @@
   flex-shrink: 0;
 }
 
-.lexguard-text {
+.lexguard-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+/* ================================
+   SECTION 2: STATS
+   ================================ */
+.lexguard-stats {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 120px;
+  align-items: center;
+  padding: 14px 20px;
+  gap: 10px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.lexguard-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.lexguard-count {
+.lexguard-stats-title {
   font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.lexguard-stats-title #lexguard-total-count {
+  font-weight: 700;
+}
+
+.lexguard-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.lexguard-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.lexguard-stat-label {
+  font-size: 10px;
+  font-weight: 500;
   color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.lexguard-count .high-count {
-  color: var(--high);
-  font-weight: 500;
+.lexguard-stat-number {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  color: #374151;
 }
 
-.lexguard-count .medium-count {
-  color: var(--medium);
-  font-weight: 500;
+.lexguard-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: #e0e0e0;
+}
+
+/* ================================
+   SECTION 3: ACTIONS
+   ================================ */
+.lexguard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.lexguard-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .lexguard-btn {
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: #161616;
   color: white;
   border: none;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -89,6 +160,18 @@
 
 .lexguard-btn:hover {
   background: #2d2d2d;
+}
+
+/* Details button - outline style */
+.lexguard-btn-details {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.lexguard-btn-details:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 /* Replace All button - primary blue */
@@ -100,46 +183,28 @@
   background: var(--primary-dark);
 }
 
-/* Review button - outline style */
+/* Review button - same outline style as details */
 .lexguard-btn-review {
   background: transparent;
-  border: 1px solid #161616;
-  color: #161616;
+  border: 1px solid #d1d5db;
+  color: #374151;
   display: none;
 }
 
 .lexguard-btn-review:hover {
-  background: #161616;
-  color: white;
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
-.lexguard-close {
-  width: 24px;
-  height: 24px;
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-  line-height: 1;
-}
-
-.lexguard-close:hover {
-  color: #161616;
-}
-
-/* Details Panel */
+/* ================================
+   DETAILS PANEL
+   ================================ */
 .lexguard-details {
   display: none;
-  margin-top: 8px;
-  padding: 8px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  max-height: 250px;
+  padding: 12px;
+  background: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -147,29 +212,77 @@
   display: block;
 }
 
+/* Group container */
+.lexguard-group {
+  margin-bottom: 12px;
+}
+
+.lexguard-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Group header */
+.lexguard-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px 4px 0 0;
+}
+
+.lexguard-group-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Severity badges - fixed width */
+.lexguard-group-severity {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  min-width: 52px;
+  text-align: center;
+}
+
+.lexguard-group-header.severity-high .lexguard-group-severity {
+  background: var(--high);
+  color: white;
+}
+
+.lexguard-group-header.severity-medium .lexguard-group-severity {
+  background: var(--medium);
+  color: white;
+}
+
+.lexguard-group-header.severity-low .lexguard-group-severity {
+  background: var(--low);
+  color: white;
+}
+
+/* Group items list */
+.lexguard-group-items {
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: white;
+}
+
 .lexguard-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  background: #fafafa;
-  margin-bottom: 4px;
-  border-left: 3px solid #e0e0e0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
   transition: all 0.3s ease;
 }
 
 .lexguard-item:last-child {
-  margin-bottom: 0;
-}
-
-.lexguard-item.severity-high {
-  border-left-color: var(--high);
-  background: #fafafa;
-}
-
-.lexguard-item.severity-medium {
-  border-left-color: var(--medium);
-  background: #fafafa;
+  border-bottom: none;
 }
 
 .lexguard-item.replaced {
@@ -181,35 +294,22 @@
   overflow: hidden;
 }
 
-.lexguard-item-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.lexguard-item-type {
-  font-size: 12px;
-  font-weight: 500;
-  color: #374151;
-  min-width: 70px;
-}
-
+/* Value field - contains text and eye icon */
 .lexguard-item-value {
   flex: 1;
   font-size: 11px;
   font-family: 'SF Mono', Monaco, Consolas, monospace;
   color: #6b7280;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 6px 32px 6px 8px;
+  border-radius: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100px;
   transition: all 0.15s;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .lexguard-item-value.revealed {
@@ -218,12 +318,23 @@
   font-weight: 500;
 }
 
-/* Eye button */
+.lexguard-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Eye button - positioned inside the value field */
 .lexguard-eye {
-  width: 24px;
-  height: 24px;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
   background: none;
-  border: 1px solid #e0e0e0;
+  border: none;
+  border-radius: 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -231,50 +342,32 @@
   color: #9ca3af;
   transition: all 0.15s;
   flex-shrink: 0;
+  padding: 4px;
 }
 
 .lexguard-eye:hover {
-  background: #161616;
-  border-color: #161616;
-  color: white;
+  color: var(--primary);
+  background: rgba(28, 96, 255, 0.1);
 }
 
-/* Replace button (per item) */
+/* Replace button (per item) - same style as Replace All */
 .lexguard-item-replace {
   width: 24px;
   height: 24px;
-  background: none;
-  border: 1px solid var(--primary);
+  background: var(--primary);
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: white;
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .lexguard-item-replace:hover {
-  background: var(--primary);
-  color: white;
-}
-
-.lexguard-item-severity {
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  flex-shrink: 0;
-}
-
-.severity-high .lexguard-item-severity {
-  background: var(--high);
-  color: white;
-}
-
-.severity-medium .lexguard-item-severity {
-  background: var(--medium);
-  color: white;
+  background: var(--primary-dark);
 }
 
 /* ================================
@@ -284,6 +377,7 @@
   position: fixed;
   background: white;
   border: 1px solid #e0e0e0;
+  border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 9999999;
   opacity: 0;
@@ -309,6 +403,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .lexguard-replace-option:hover {
@@ -319,14 +414,8 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
-.lexguard-replace-option:last-child {
-  color: #161616;
-  font-weight: 500;
-}
-
 .lexguard-replace-option:last-child:hover {
-  background: #161616;
-  color: white;
+  background: #f5f5f5;
 }
 
 /* ================================
@@ -340,6 +429,7 @@
   background: #161616;
   color: white;
   padding: 12px 20px;
+  border-radius: 4px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -401,6 +491,7 @@
   font-size: 12px;
   font-weight: 500;
   padding: 8px 12px;
+  border-radius: 4px;
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
@@ -464,6 +555,7 @@
 .lexguard-loading-content {
   background: white;
   padding: 20px 32px;
+  border-radius: 4px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;

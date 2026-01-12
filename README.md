@@ -1,13 +1,14 @@
-# LexyGuard
+# NyxGuard
 
 **AI Data Protection - Detect and protect sensitive data before sharing with ChatGPT and Gemini**
 
-LexyGuard is a browser extension that automatically scans your input fields on AI chat platforms (ChatGPT, Gemini) to detect sensitive personal and financial information before you send it. It helps prevent accidental data leaks by alerting you and providing tools to mask or remove sensitive data.
+NyxGuard is a browser extension that automatically scans your input fields on AI chat platforms (ChatGPT, Gemini) to detect sensitive personal and financial information before you send it. It helps prevent accidental data leaks by alerting you and providing tools to mask or remove sensitive data.
 
 ## Features
 
 - **Real-time Detection**: Automatically scans text as you type in chat input fields
 - **Sensitive Data Patterns**: Detects:
+
   - Georgian Personal ID numbers (11 digits)
   - Georgian Company ID numbers (9 digits)
   - IBAN bank account numbers
@@ -16,6 +17,7 @@ LexyGuard is a browser extension that automatically scans your input fields on A
   - Website URLs
 
 - **Protection Options**:
+
   - Visual alerts with a banner showing detected items
   - Block send button when sensitive data is detected
   - Replace sensitive data with placeholders
@@ -38,7 +40,7 @@ LexyGuard is a browser extension that automatically scans your input fields on A
 
 ## Usage
 
-Once installed, LexyGuard works automatically. When you type sensitive information in chat input fields:
+Once installed, NyxGuard works automatically. When you type sensitive information in chat input fields:
 
 1. A banner appears showing detected sensitive data
 2. Click "Details" to see all detected items
@@ -48,6 +50,7 @@ Once installed, LexyGuard works automatically. When you type sensitive informati
 ## Configuration
 
 Click the extension icon to access settings:
+
 - Toggle sound alerts
 - Toggle shake animation
 - Switch language (English/Georgian)

@@ -5,9 +5,13 @@ LexGuard.languageReady = false;
 
 LexGuard.TRANSLATIONS = {
     en: {
-        sensitiveDataDetected: 'Sensitive data detected',
+        sensitiveDataDetected: 'Number of Sensitive data detected',
         high: 'high',
         medium: 'medium',
+        low: 'low',
+        highRisk: 'High Risk',
+        mediumRisk: 'Medium Risk',
+        lowRisk: 'Low Risk',
         details: 'Details',
         hide: 'Hide',
         replaceAll: 'Replace All',
@@ -26,20 +30,24 @@ LexGuard.TRANSLATIONS = {
         patterns: {
             website: 'Website URL',
             ssn: 'SSN / National ID',
-            georgianId: 'Georgian Personal ID',
+            georgianId: 'Personal ID',
             creditCard: 'Credit Card',
             email: 'Email Address',
             iban: 'IBAN / Bank Info',
             passport: 'Passport Number',
             phone: 'Phone Number',
             zipCode: 'ZIP / Postal Code',
-            georgianCompanyId: "Georgian Company ID",
+            georgianCompanyId: "Company ID",
         }
     },
     ka: {
-        sensitiveDataDetected: 'აღმოჩენილია სენსიტიური მონაცემები',
+        sensitiveDataDetected: 'აღმოჩენილი სენსიტიური მონაცემების რაოდენობა',
         high: 'მაღალი',
         medium: 'საშუალო',
+        low: 'დაბალი',
+        highRisk: 'მაღალი რისკი',
+        mediumRisk: 'საშუალო რისკი',
+        lowRisk: 'დაბალი რისკი',
         details: 'დეტალები',
         hide: 'დამალვა',
         replaceAll: 'ყველას ჩანაცვლება',
@@ -58,7 +66,7 @@ LexGuard.TRANSLATIONS = {
         patterns: {
             website: 'ვებსაიტის მისამართი',
             ssn: 'SSN / პირადი ნომერი',
-            georgianId: 'საქართველოს პირადი ნომერი',
+            georgianId: 'პირადი ნომერი',
             creditCard: 'საკრედიტო ბარათი',
             email: 'ელ.ფოსტა',
             iban: 'IBAN / საბანკო ინფო',

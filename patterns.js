@@ -35,7 +35,7 @@ LexGuard.PATTERNS = {
     website: {
         name: 'Website URL',
         icon: '🌐',
-        severity: 'medium',
+        severity: 'low',
         pattern: /(?:(?:https?:\/\/)|(?:www\.))[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}(?:[-a-zA-Z0-9._~:/?#[\]@!$&'()*+,;=%]*)?/g,
         placeholder: 'https://example.com',
     },
@@ -58,14 +58,14 @@ LexGuard.PATTERNS = {
         }
     },
     iban: {
-        name: 'Georgian IBAN',
+        name: 'IBAN',
         icon: '🏦',
         severity: 'high',
         pattern: /\bGE\d{2}[A-Z]{2}\d{16}\b/g,
         placeholder: 'GE00XX0000000000000000',
     },
     georgianId: {
-        name: 'Georgian Personal ID',
+        name: 'Personal ID',
         icon: '🇬🇪',
         severity: 'high',
         pattern: /(?<![\.\/-])\b\d{11}\b(?![\.\/-])/g,
@@ -75,7 +75,7 @@ LexGuard.PATTERNS = {
         }
     },
     georgianCompanyId: {
-        name: 'Georgian Company ID',
+        name: 'Company ID',
         icon: '🏢',
         severity: 'high',
         pattern: /(?<![\.\/-])\b\d{9}\b(?![\.\/-])/g,
@@ -100,14 +100,14 @@ Object.values(LexGuard.PATTERNS).forEach(p => {
 
 LexGuard.SETTINGS = {
     shakeAnimation: true,
-    soundAlert: false,
-    blockSendButton: true  // Cannot be disabled
+    blockSendButton: true,  // Cannot be disabled
+    disabledPatterns: []    // Array of pattern keys that are disabled
 };
 
 if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['shakeAnimation', 'soundAlert'], (result) => {
+    chrome.storage.local.get(['shakeAnimation', 'disabledPatterns'], (result) => {
         if (result.shakeAnimation !== undefined) LexGuard.SETTINGS.shakeAnimation = result.shakeAnimation;
-        if (result.soundAlert !== undefined) LexGuard.SETTINGS.soundAlert = result.soundAlert;
+        if (Array.isArray(result.disabledPatterns)) LexGuard.SETTINGS.disabledPatterns = result.disabledPatterns;
     });
 }
 
@@ -115,7 +115,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (msg.type === 'LEXGUARD_SETTINGS' && msg.settings) {
             if (msg.settings.shakeAnimation !== undefined) LexGuard.SETTINGS.shakeAnimation = msg.settings.shakeAnimation;
-            if (msg.settings.soundAlert !== undefined) LexGuard.SETTINGS.soundAlert = msg.settings.soundAlert;
+            if (Array.isArray(msg.settings.disabledPatterns)) LexGuard.SETTINGS.disabledPatterns = msg.settings.disabledPatterns;
 
             if (msg.settings.language) {
                 LexGuard.LANG = msg.settings.language;

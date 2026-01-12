@@ -61,30 +61,47 @@ LexGuard.ui = {
         const t = LexGuard.t;
 
         const el = document.createElement('div');
+        // const logoUrl = chrome.runtime.getURL('images/favicon.png');
         el.id = 'lexguard-banner';
         el.innerHTML = `
-            <div class="lexguard-content">
-                <div class="lexguard-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="3" y="11" width="18" height="11"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                        <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
-                        <path d="M12 17.5V19"/>
-                    </svg>
+            <!-- Section 1: Header -->
+          <div class="lexguard-header">
+                <div class="lexguard-header-left">
+                    <span class="lexguard-title">NyxGuard WARNING</span>
                 </div>
-                <div class="lexguard-text">
-                    <span class="lexguard-title">${t('sensitiveDataDetected')}</span>
-                    <span class="lexguard-count" id="lexguard-count">0</span>
-                </div>
-                <button class="lexguard-btn" id="lexguard-show">${t('details')}</button>
-                <button class="lexguard-btn lexguard-btn-replace" id="lexguard-replace-all">${t('replaceAll')}</button>
-                <button class="lexguard-btn lexguard-btn-review" id="lexguard-review">${t('reviewed')}</button>
-                <button class="lexguard-close" id="lexguard-close">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </button>
             </div>
+
+            <!-- Section 2: Stats -->
+            <div class="lexguard-stats">
+                <div class="lexguard-stats-title"> ${t('sensitiveDataDetected')}</div>
+                <div class="lexguard-stats-row">
+                    <div class="lexguard-stat">
+                        <span class="lexguard-stat-number" id="lexguard-high-count">0</span>
+                        <span class="lexguard-stat-label">${t('highRisk')}</span>
+                    </div>
+                    <div class="lexguard-stat-divider"></div>
+                    <div class="lexguard-stat">
+                        <span class="lexguard-stat-number" id="lexguard-medium-count">0</span>
+                        <span class="lexguard-stat-label">${t('mediumRisk')}</span>
+                    </div>
+                    <div class="lexguard-stat-divider"></div>
+                    <div class="lexguard-stat">
+                        <span class="lexguard-stat-number" id="lexguard-low-count">0</span>
+                        <span class="lexguard-stat-label">${t('lowRisk')}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Actions -->
+            <div class="lexguard-actions">
+                <button class="lexguard-btn lexguard-btn-review" id="lexguard-review">${t('reviewed')}</button>
+                <div class="lexguard-actions-right">
+                    <button class="lexguard-btn lexguard-btn-details" id="lexguard-show">${t('details')}</button>
+                    <button class="lexguard-btn lexguard-btn-replace" id="lexguard-replace-all">${t('replaceAll')}</button>
+                </div>
+            </div>
+
+            <!-- Details Panel -->
             <div class="lexguard-details" id="lexguard-details"></div>
         `;
 
@@ -106,7 +123,6 @@ LexGuard.ui = {
         this.replaceMenu = menuEl;
 
         // Event listeners
-        document.getElementById('lexguard-close').addEventListener('click', () => this.hideBanner());
         document.getElementById('lexguard-show').addEventListener('click', () => this.toggleDetails());
         document.getElementById('lexguard-review').addEventListener('click', () => LexGuard.scanner.handleReview());
 
@@ -203,142 +219,155 @@ LexGuard.ui = {
         if (!this.banner) this.createBanner();
         const t = LexGuard.t;
 
-        // SVG icons for each pattern type
-        const ITEM_ICONS = {
-            website: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-            ssn: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="14" y2="16"/></svg>',
-            georgianId: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><circle cx="12" cy="10" r="3"/><path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/></svg>',
-            creditCard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
-            iban: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><path d="M9 22v-4h6v4"/></svg>',
-            passport: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-            email: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16"/><path d="M22 6l-10 7L2 6"/></svg>',
-            phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
-            georgianCompanyId: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="16" height="20"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="9" y1="14" x2="9" y2="14.01"/><line x1="15" y1="14" x2="15" y2="14.01"/><path d="M9 22v-4h6v4"/></svg>'
-        };
-
         const highCount = items.filter(i => i.severity === 'high').length;
         const mediumCount = items.filter(i => i.severity === 'medium').length;
+        const lowCount = items.filter(i => i.severity === 'low').length;
+        const totalCount = items.length;
 
-        const countEl = document.getElementById('lexguard-count');
-        if (countEl) {
-            // Fix XSS: Use DOM methods instead of innerHTML
-            countEl.textContent = ''; // Clear first
-            const highSpan = document.createElement('span');
-            highSpan.className = 'high-count';
-            highSpan.textContent = `${highCount} ${t('high')}`;
-            const separator = document.createTextNode(' · ');
-            const mediumSpan = document.createElement('span');
-            mediumSpan.className = 'medium-count';
-            mediumSpan.textContent = `${mediumCount} ${t('medium')}`;
-            countEl.appendChild(highSpan);
-            countEl.appendChild(separator);
-            countEl.appendChild(mediumSpan);
-        }
+        // Update stats section
+        const totalCountEl = document.getElementById('lexguard-total-count');
+        const highCountEl = document.getElementById('lexguard-high-count');
+        const mediumCountEl = document.getElementById('lexguard-medium-count');
+        const lowCountEl = document.getElementById('lexguard-low-count');
+
+        if (totalCountEl) totalCountEl.textContent = totalCount;
+        if (highCountEl) highCountEl.textContent = highCount;
+        if (mediumCountEl) mediumCountEl.textContent = mediumCount;
+        if (lowCountEl) lowCountEl.textContent = lowCount;
 
         const detailsEl = document.getElementById('lexguard-details');
         if (!detailsEl) return;
 
         detailsEl.textContent = ''; // Clear safely
 
+        // Group items by severity (high → medium → low)
+        const severityOrder = ['high', 'medium', 'low'];
+        const severityLabels = {
+            high: t('high'),
+            medium: t('medium'),
+            low: t('low')
+        };
+
+        const groupedBySeverity = {};
         items.forEach((item, index) => {
-            const row = document.createElement('div');
-            row.className = `lexguard-item severity-${item.severity}`;
-            row.dataset.index = index;
+            const severity = item.severity || 'low';
+            if (!groupedBySeverity[severity]) {
+                groupedBySeverity[severity] = [];
+            }
+            groupedBySeverity[severity].push({ ...item, originalIndex: index });
+        });
 
-            // Escape all user-controlled data where needed for attributes; use raw values for
-            // dataset and textContent so masking and display lengths remain correct.
-            const rawValue = item.value;
-            const patternName = t(`patterns.${item.type}`) || item.name;
-            const maskedValue = LexGuard.utils.maskValue(rawValue);
+        // Render groups in severity order
+        severityOrder.forEach(severity => {
+            const group = groupedBySeverity[severity];
+            if (!group || group.length === 0) return;
 
-            // Use structured DOM APIs plus static SVG icon map to avoid XSS
-            const iconSvg = ITEM_ICONS[item.type] || ITEM_ICONS.ssn;
-            const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
-            const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
-            const escapedSeverity = LexGuard.utils.escapeHtml(item.severity === 'high' ? t('high') : t('medium'));
+            // Create group container
+            const groupEl = document.createElement('div');
+            groupEl.className = 'lexguard-group';
 
-            // Create elements safely using DOM methods
-            const iconSpan = document.createElement('span');
-            iconSpan.className = 'lexguard-item-icon';
-            // iconSvg comes from a trusted static map, so innerHTML here is safe
-            iconSpan.innerHTML = iconSvg;
-
-            const typeSpan = document.createElement('span');
-            typeSpan.className = 'lexguard-item-type';
-            typeSpan.textContent = patternName;
-
-            const valueSpan = document.createElement('span');
-            valueSpan.className = 'lexguard-item-value';
-            valueSpan.dataset.masked = 'true';
-            // Store the original unescaped value so reveal/mask operations work with the correct
-            // string length and users never see HTML entities; textContent keeps it safe in the DOM.
-            valueSpan.dataset.original = rawValue;
-            valueSpan.textContent = maskedValue;
-
-            const eyeBtn = document.createElement('button');
-            eyeBtn.className = 'lexguard-eye';
-            eyeBtn.setAttribute('title', escapedShowHide);
-            eyeBtn.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-            `;
-
-            const replaceBtn = document.createElement('button');
-            replaceBtn.className = 'lexguard-item-replace';
-            replaceBtn.setAttribute('title', escapedReplace);
-            replaceBtn.innerHTML = `
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 1l4 4-4 4"/>
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <path d="M7 23l-4-4 4-4"/>
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                </svg>
-            `;
+            // Create group header
+            const headerEl = document.createElement('div');
+            headerEl.className = `lexguard-group-header severity-${severity}`;
 
             const severitySpan = document.createElement('span');
-            severitySpan.className = 'lexguard-item-severity';
-            severitySpan.textContent = escapedSeverity;
+            severitySpan.className = 'lexguard-group-type';
+            severitySpan.textContent = `${severityLabels[severity]} (${group.length})`;
 
-            // Append all elements
-            row.appendChild(iconSpan);
-            row.appendChild(typeSpan);
-            row.appendChild(valueSpan);
-            row.appendChild(eyeBtn);
-            row.appendChild(replaceBtn);
-            row.appendChild(severitySpan);
+            headerEl.appendChild(severitySpan);
+            groupEl.appendChild(headerEl);
 
-            // Eye button - toggle mask (already created above, just get reference)
-            const valueEl = valueSpan;
+            // Create items list
+            const itemsListEl = document.createElement('div');
+            itemsListEl.className = 'lexguard-group-items';
 
-            eyeBtn.addEventListener('click', () => {
-                const isMasked = valueEl.dataset.masked === 'true';
-                const original = valueEl.dataset.original;
+            group.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'lexguard-item';
+                row.dataset.index = item.originalIndex;
 
-                if (isMasked) {
-                    // Reveal original raw value; textContent handles escaping for safe display.
-                    valueEl.textContent = original;
-                    valueEl.dataset.masked = 'false';
-                    valueEl.classList.add('revealed');
-                } else {
-                    // Re-mask using the original raw value so masking length is correct.
-                    valueEl.textContent = LexGuard.utils.maskValue(original);
-                    valueEl.dataset.masked = 'true';
-                    valueEl.classList.remove('revealed');
-                }
+                const rawValue = item.value;
+                const maskedValue = LexGuard.utils.maskValue(rawValue);
+                const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
+                const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
+
+                // Type label
+                const typeLabel = document.createElement('span');
+                typeLabel.className = 'lexguard-item-type';
+                typeLabel.textContent = t(`patterns.${item.type}`) || item.name;
+
+                // Value container with eye button inside
+                const valueSpan = document.createElement('span');
+                valueSpan.className = 'lexguard-item-value';
+                valueSpan.dataset.masked = 'true';
+                valueSpan.dataset.original = rawValue;
+
+                // Text element inside value
+                const textSpan = document.createElement('span');
+                textSpan.className = 'lexguard-item-text';
+                textSpan.textContent = maskedValue;
+
+                // Eye button inside value
+                const eyeBtn = document.createElement('button');
+                eyeBtn.className = 'lexguard-eye';
+                eyeBtn.setAttribute('title', escapedShowHide);
+                eyeBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                `;
+
+                valueSpan.appendChild(textSpan);
+                valueSpan.appendChild(eyeBtn);
+
+                // Replace button (outside value)
+                const replaceBtn = document.createElement('button');
+                replaceBtn.className = 'lexguard-item-replace';
+                replaceBtn.setAttribute('title', escapedReplace);
+                replaceBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 1l4 4-4 4"/>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                        <path d="M7 23l-4-4 4-4"/>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                `;
+
+                row.appendChild(typeLabel);
+                row.appendChild(valueSpan);
+                row.appendChild(replaceBtn);
+
+                // Eye button toggle
+                eyeBtn.addEventListener('click', () => {
+                    const isMasked = valueSpan.dataset.masked === 'true';
+                    const original = valueSpan.dataset.original;
+
+                    if (isMasked) {
+                        textSpan.textContent = original;
+                        valueSpan.dataset.masked = 'false';
+                        valueSpan.classList.add('revealed');
+                    } else {
+                        textSpan.textContent = LexGuard.utils.maskValue(original);
+                        valueSpan.dataset.masked = 'true';
+                        valueSpan.classList.remove('revealed');
+                    }
+                });
+
+                // Replace button
+                replaceBtn.addEventListener('click', (e) => {
+                    if (LexGuard.scanner.isProcessing) return;
+                    console.log('LexGuard: Item replace button clicked, index:', item.originalIndex);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showReplaceMenu(e, item.originalIndex.toString());
+                });
+
+                itemsListEl.appendChild(row);
             });
 
-            // Replace button (already created above)
-            replaceBtn.addEventListener('click', (e) => {
-                if (LexGuard.scanner.isProcessing) return;
-                console.log('LexGuard: Item replace button clicked, index:', index);
-                e.preventDefault();
-                e.stopPropagation();
-                this.showReplaceMenu(e, index.toString());
-            });
-
-            detailsEl.appendChild(row);
+            groupEl.appendChild(itemsListEl);
+            detailsEl.appendChild(groupEl);
         });
 
         this.banner.classList.add('visible');
@@ -358,13 +387,8 @@ LexGuard.ui = {
     },
 
     toggleDetails: function () {
-        const t = LexGuard.t;
         if (this.banner) {
             this.banner.classList.toggle('expanded');
-            const showBtn = document.getElementById('lexguard-show');
-            if (showBtn) {
-                showBtn.textContent = this.banner.classList.contains('expanded') ? t('hide') : t('details');
-            }
         }
     },
 
@@ -377,8 +401,11 @@ LexGuard.ui = {
         }
 
         const rect = e.target.getBoundingClientRect();
+        const menuWidth = 200; // min-width from CSS
+
+        // Position menu to the left of the button
         this.replaceMenu.style.top = (rect.bottom + 5) + 'px';
-        this.replaceMenu.style.left = rect.left + 'px';
+        this.replaceMenu.style.left = (rect.right - menuWidth) + 'px';
         this.replaceMenu.dataset.target = target;
         this.replaceMenu.classList.add('visible');
         console.log('LexGuard: Menu should be visible now');
@@ -409,23 +436,15 @@ LexGuard.ui = {
                 el.dataset.index = i;
             });
 
-            // Update count (fix XSS: use DOM methods)
+            // Update stats
             const highCount = items.filter(i => i.severity === 'high').length;
             const mediumCount = items.filter(i => i.severity === 'medium').length;
-            const countEl = document.getElementById('lexguard-count');
-            if (countEl) {
-                countEl.textContent = '';
-                const highSpan = document.createElement('span');
-                highSpan.className = 'high-count';
-                highSpan.textContent = `${highCount} ${t('high')}`;
-                const separator = document.createTextNode(' · ');
-                const mediumSpan = document.createElement('span');
-                mediumSpan.className = 'medium-count';
-                mediumSpan.textContent = `${mediumCount} ${t('medium')}`;
-                countEl.appendChild(highSpan);
-                countEl.appendChild(separator);
-                countEl.appendChild(mediumSpan);
-            }
+
+            const highCountEl = document.getElementById('lexguard-high-count');
+            const mediumCountEl = document.getElementById('lexguard-medium-count');
+
+            if (highCountEl) highCountEl.textContent = highCount;
+            if (mediumCountEl) mediumCountEl.textContent = mediumCount;
         }
     },
 
