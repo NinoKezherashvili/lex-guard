@@ -13,10 +13,10 @@ const TRANSLATIONS = {
         patterns: {
             website: 'Website URLs',
             email: 'Email Addresses',
-            phone: 'Georgian Phone Numbers',
-            iban: 'Georgian IBAN',
-            georgianId: 'Georgian Personal ID',
-            georgianCompanyId: 'Georgian Company ID',
+            phone: 'Phone Numbers',
+            iban: 'IBAN',
+            georgianId: 'Personal ID',
+            georgianCompanyId: 'Company ID',
         }
     },
     ka: {
@@ -33,8 +33,8 @@ const TRANSLATIONS = {
         patterns: {
             website: 'ვებსაიტის მისამართები',
             email: 'ელ.ფოსტის მისამართები',
-            phone: 'ქართული ტელეფონის ნომრები',
-            iban: 'ქართული IBAN',
+            phone: 'ტელეფონის ნომრები',
+            iban: 'IBAN',
             georgianId: 'პირადი ნომერი',
             georgianCompanyId: 'საიდენტიფიკაციო კოდი',
         }
