@@ -240,27 +240,22 @@ LexGuard.ui = {
 
         detailsEl.textContent = ''; // Clear safely
 
-        // Group items by severity (high → medium → low)
-        const severityOrder = ['high', 'medium', 'low'];
-        const severityLabels = {
-            high: t('high'),
-            medium: t('medium'),
-            low: t('low')
-        };
-
-        const groupedBySeverity = {};
+        // Group items by type
+        const groupedItems = {};
         items.forEach((item, index) => {
-            const severity = item.severity || 'low';
-            if (!groupedBySeverity[severity]) {
-                groupedBySeverity[severity] = [];
+            if (!groupedItems[item.type]) {
+                groupedItems[item.type] = {
+                    name: t(`patterns.${item.type}`) || item.name,
+                    severity: item.severity,
+                    items: []
+                };
             }
-            groupedBySeverity[severity].push({ ...item, originalIndex: index });
+            groupedItems[item.type].items.push({ ...item, originalIndex: index });
         });
 
-        // Render groups in severity order
-        severityOrder.forEach(severity => {
-            const group = groupedBySeverity[severity];
-            if (!group || group.length === 0) return;
+        // Render grouped items
+        Object.keys(groupedItems).forEach(type => {
+            const group = groupedItems[type];
 
             // Create group container
             const groupEl = document.createElement('div');
@@ -268,12 +263,17 @@ LexGuard.ui = {
 
             // Create group header
             const headerEl = document.createElement('div');
-            headerEl.className = `lexguard-group-header severity-${severity}`;
+            headerEl.className = `lexguard-group-header severity-${group.severity}`;
+
+            const typeSpan = document.createElement('span');
+            typeSpan.className = 'lexguard-group-type';
+            typeSpan.textContent = group.name;
 
             const severitySpan = document.createElement('span');
-            severitySpan.className = 'lexguard-group-type';
-            severitySpan.textContent = `${severityLabels[severity]} (${group.length})`;
+            severitySpan.className = 'lexguard-group-severity';
+            severitySpan.textContent = group.severity === 'high' ? t('high') : (group.severity === 'medium' ? t('medium') : t('low'));
 
+            headerEl.appendChild(typeSpan);
             headerEl.appendChild(severitySpan);
             groupEl.appendChild(headerEl);
 
@@ -281,7 +281,7 @@ LexGuard.ui = {
             const itemsListEl = document.createElement('div');
             itemsListEl.className = 'lexguard-group-items';
 
-            group.forEach(item => {
+            group.items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'lexguard-item';
                 row.dataset.index = item.originalIndex;
@@ -290,11 +290,6 @@ LexGuard.ui = {
                 const maskedValue = LexGuard.utils.maskValue(rawValue);
                 const escapedShowHide = LexGuard.utils.escapeHtml(t('showHideValue'));
                 const escapedReplace = LexGuard.utils.escapeHtml(t('replace'));
-
-                // Type label
-                const typeLabel = document.createElement('span');
-                typeLabel.className = 'lexguard-item-type';
-                typeLabel.textContent = t(`patterns.${item.type}`) || item.name;
 
                 // Value container with eye button inside
                 const valueSpan = document.createElement('span');
@@ -334,7 +329,6 @@ LexGuard.ui = {
                     </svg>
                 `;
 
-                row.appendChild(typeLabel);
                 row.appendChild(valueSpan);
                 row.appendChild(replaceBtn);
 

@@ -75,6 +75,7 @@ const loadSettings = async () => {
         }
     } catch (e) {
         console.warn('Storage access failed', e);
+        currentSettings = { ...DEFAULT_SETTINGS };
     }
 };
 
@@ -82,16 +83,20 @@ const saveSettings = async () => {
     if (typeof chrome === 'undefined' || !chrome.storage) return;
 
     try {
-        await chrome.storage.local.set(currentSettings);
+        // Validate settings before saving
+        const validatedSettings = validateSettings(currentSettings);
+        currentSettings = validatedSettings;
+
+        await chrome.storage.local.set(validatedSettings);
         if (chrome.tabs) {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
             if (tab?.id) {
                 await chrome.tabs.sendMessage(tab.id, {
                     type: 'LEXGUARD_SETTINGS',
-                    settings: currentSettings
+                    settings: validatedSettings
                 }).catch(() => {
-                    console.log('Failed to send message.')
+                    console.warn('LexGuard: Failed to send message to content script.');
                 });
             }
         }
@@ -186,16 +191,24 @@ const renderUI = () => {
 const setupEventListeners = () => {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            currentSettings.language = btn.dataset.lang;
-            renderUI();
-            saveSettings();
+            const lang = btn.dataset.lang;
+            // Validate language before setting
+            if (VALID_LANGUAGES.includes(lang)) {
+                currentSettings.language = lang;
+                renderUI();
+                saveSettings();
+            } else {
+                console.warn('LexGuard: Invalid language selected:', lang);
+            }
         });
     });
 
     const shakeToggle = document.getElementById('setting-shake');
     if (shakeToggle) {
         shakeToggle.addEventListener('change', () => {
-            currentSettings.shakeAnimation = shakeToggle.checked;
+            // Toggle values are always boolean, but validate anyway
+            const value = !!shakeToggle.checked;
+            currentSettings.shakeAnimation = value;
             saveSettings();
         });
     }
