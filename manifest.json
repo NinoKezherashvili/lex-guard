@@ -4,9 +4,6 @@
   "version": "1.0.2",
   "description": "AI Data Protection - Detect and protect sensitive data before sharing with ChatGPT",
   "permissions": ["storage", "activeTab"],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self';"
-  },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
