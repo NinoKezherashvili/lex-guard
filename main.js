@@ -14,17 +14,16 @@
             window.LexGuard.PATTERNS) {
             callback();
         } else {
-            const retryDelay = (window.LexGuard && window.LexGuard.TIMING)
-                ? window.LexGuard.TIMING.RETRY_INIT_DELAY
-                : 50;
-            setTimeout(() => waitForLexGuard(callback, attempts + 1), retryDelay);
+            setTimeout(() => waitForLexGuard(callback, attempts + 1), 50);
         }
     };
 
     waitForLexGuard(() => {
-        const debouncedScan = LexGuard.utils.debounce((text) => {
-            LexGuard.logDebug('LexGuard: Scanning text of length', text.length);
-            LexGuard.scanner.scanText(text);
+        const LG = window.LexGuard;
+
+        const debouncedScan = LG.utils.debounce((text) => {
+            console.log('LexGuard: Scanning text of length', text.length);
+            LG.scanner.scanText(text);
         }, 300);
 
         const observedInputs = new WeakSet();
@@ -32,14 +31,14 @@
         const attachInputListeners = (input) => {
             if (!input || observedInputs.has(input)) return;
 
-            LexGuard.logDebug('LexGuard: Attaching listeners to', input.tagName, input.id || input.className);
+            console.log('LexGuard: Attaching listeners to', input.tagName, input.id || input.className);
 
             observedInputs.add(input);
             input.dataset.lexguard = 'true';
 
             const handleInput = () => {
                 const text = input.textContent || input.innerText || input.value || '';
-                LexGuard.logDebug('LexGuard: Input event, text length:', text.length);
+                console.log('LexGuard: Input event, text length:', text.length);
                 debouncedScan(text);
             };
 
@@ -47,7 +46,7 @@
             input.addEventListener('keyup', handleInput);
 
             input.addEventListener('paste', () => {
-                setTimeout(handleInput, LexGuard.TIMING.PASTE_HANDLER_DELAY);
+                setTimeout(handleInput, 50);
             });
 
             const initialText = input.textContent || input.innerText || input.value || '';
@@ -72,7 +71,7 @@
             for (const selector of selectors) {
                 const input = document.querySelector(selector);
                 if (input && !input.dataset.lexguard && input.style.display !== 'none') {
-                    LexGuard.logDebug('LexGuard: Found input with selector:', selector);
+                    console.log('LexGuard: Found input with selector:', selector);
                     attachInputListeners(input);
                     return;
                 }
@@ -103,13 +102,14 @@
 
         const init = () => {
             const patternCount = Object.keys(LG.PATTERNS).length;
+            console.log(`🛡️ LexGuard: Active on ChatGPT (${patternCount} patterns)`);
 
-            LexGuard.ui.init();
+            LG.ui.init();
             findAndObserveInputs();
             observeDOM();
 
-            setTimeout(findAndObserveInputs, LexGuard.TIMING.INITIAL_SCAN_DELAY);
-            setTimeout(findAndObserveInputs, LexGuard.TIMING.RETRY_SCAN_DELAY);
+            setTimeout(findAndObserveInputs, 1000);
+            setTimeout(findAndObserveInputs, 3000);
         };
 
         if (document.readyState === 'loading') {

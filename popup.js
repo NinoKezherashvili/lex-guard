@@ -6,16 +6,17 @@ const TRANSLATIONS = {
         shakeLabel: 'Shake on detection',
         keyLabel: 'API Key',
         keyPlaceholder: 'Enter your API key',
+        detectingTitle: 'Detecting',
         detectingPatternsLabel: 'Patterns',
         high: 'High',
         medium: 'Medium',
         patterns: {
             website: 'Website URLs',
             email: 'Email Addresses',
-            phone: 'Phone Numbers',
-            iban: 'IBAN',
-            georgianId: 'Personal ID',
-            georgianCompanyId: 'Company ID',
+            phone: 'Georgian Phone Numbers',
+            iban: 'Georgian IBAN',
+            georgianId: 'Georgian Personal ID',
+            georgianCompanyId: 'Georgian Company ID',
         }
     },
     ka: {
@@ -25,14 +26,15 @@ const TRANSLATIONS = {
         shakeLabel: 'ვიბრაცია აღმოჩენისას',
         keyLabel: 'API გასაღები',
         keyPlaceholder: 'შეიყვანეთ API გასაღები',
+        detectingTitle: 'აღმოჩენა',
         detectingPatternsLabel: 'შაბლონები',
         high: 'მაღალი',
         medium: 'საშუალო',
         patterns: {
             website: 'ვებსაიტის მისამართები',
             email: 'ელ.ფოსტის მისამართები',
-            phone: 'ტელეფონის ნომრები',
-            iban: 'IBAN',
+            phone: 'ქართული ტელეფონის ნომრები',
+            iban: 'ქართული IBAN',
             georgianId: 'პირადი ნომერი',
             georgianCompanyId: 'საიდენტიფიკაციო კოდი',
         }
@@ -75,7 +77,6 @@ const loadSettings = async () => {
         }
     } catch (e) {
         console.warn('Storage access failed', e);
-        currentSettings = { ...DEFAULT_SETTINGS };
     }
 };
 
@@ -83,20 +84,16 @@ const saveSettings = async () => {
     if (typeof chrome === 'undefined' || !chrome.storage) return;
 
     try {
-        // Validate settings before saving
-        const validatedSettings = validateSettings(currentSettings);
-        currentSettings = validatedSettings;
-
-        await chrome.storage.local.set(validatedSettings);
+        await chrome.storage.local.set(currentSettings);
         if (chrome.tabs) {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
             if (tab?.id) {
                 await chrome.tabs.sendMessage(tab.id, {
                     type: 'LEXGUARD_SETTINGS',
-                    settings: validatedSettings
+                    settings: currentSettings
                 }).catch(() => {
-                    console.warn('LexGuard: Failed to send message to content script.');
+                    console.log('Failed to send message.')
                 });
             }
         }
@@ -119,10 +116,21 @@ const togglePattern = (patternKey) => {
         currentSettings.disabledPatterns.splice(index, 1);
     }
     saveSettings();
+    updateDetectingTitle();
+};
+
+const updateDetectingTitle = () => {
+    const t = TRANSLATIONS[currentSettings.language];
+    const enabledCount = PATTERNS.filter(p => isPatternEnabled(p.key)).length;
+    const detectingTitle = document.getElementById('detecting-title');
+    if (detectingTitle) {
+        detectingTitle.textContent = `${t.detectingTitle} ${t.detectingPatternsLabel}`;
+    }
 };
 
 const renderUI = () => {
     const t = TRANSLATIONS[currentSettings.language];
+    const enabledCount = PATTERNS.filter(p => isPatternEnabled(p.key)).length;
 
     const statusLabel = document.getElementById('status-label');
     if (statusLabel) statusLabel.textContent = t.statusLabel;
@@ -144,7 +152,7 @@ const renderUI = () => {
 
     const detectingTitle = document.getElementById('detecting-title');
     if (detectingTitle) {
-        detectingTitle.textContent = t.detectingPatternsLabel;
+        detectingTitle.textContent = `${t.detectingPatternsLabel}`;
     }
 
     document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -191,24 +199,16 @@ const renderUI = () => {
 const setupEventListeners = () => {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const lang = btn.dataset.lang;
-            // Validate language before setting
-            if (VALID_LANGUAGES.includes(lang)) {
-                currentSettings.language = lang;
-                renderUI();
-                saveSettings();
-            } else {
-                console.warn('LexGuard: Invalid language selected:', lang);
-            }
+            currentSettings.language = btn.dataset.lang;
+            renderUI();
+            saveSettings();
         });
     });
 
     const shakeToggle = document.getElementById('setting-shake');
     if (shakeToggle) {
         shakeToggle.addEventListener('change', () => {
-            // Toggle values are always boolean, but validate anyway
-            const value = !!shakeToggle.checked;
-            currentSettings.shakeAnimation = value;
+            currentSettings.shakeAnimation = shakeToggle.checked;
             saveSettings();
         });
     }

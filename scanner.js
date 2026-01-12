@@ -9,18 +9,6 @@ LexGuard.scanner = {
     _tooltipShowHandler: null,
     _tooltipHideHandler: null,
 
-    /**
-     * Scans text for sensitive data patterns (SSN, credit cards, emails, etc.).
-     * Automatically shows/hides banner, plays alerts, and blocks send button based on settings.
-     * @param {string} text - The text content to scan for sensitive patterns
-     * @returns {Array<Object>} Array of detected items, each containing:
-     *   - {string} type - Pattern type key (e.g., 'ssn', 'creditCard')
-     *   - {string} name - Human-readable pattern name
-     *   - {string} icon - Icon identifier
-     *   - {string} severity - 'high' or 'medium'
-     *   - {string} value - The detected sensitive value
-     *   - {string} placeholder - Placeholder text for replacement
-     */
     scanText: function (text) {
         if (!text || text.length < 3) {
             LexGuard.ui.hideBanner();
@@ -82,7 +70,7 @@ LexGuard.scanner = {
                 if (config.validate) {
                     const isValid = config.validate(matchValue, matchIndex, text);
                     if (!isValid) {
-                        LexGuard.logDebug(`LexGuard: Skipping ${key} match "${matchValue}" - failed validation`);
+                        console.log(`LexGuard: Skipping ${key} match "${matchValue}" - failed validation`);
                         continue;
                     }
                 }
@@ -129,11 +117,6 @@ LexGuard.scanner = {
         return found;
     },
 
-    /**
-     * Finds the active input element (textarea or contenteditable) for ChatGPT/Gemini.
-     * Tries multiple selectors to support different UI variations.
-     * @returns {HTMLElement|null} The input element, or null if not found
-     */
     getInputElement: function () {
         return (
             // ChatGPT
@@ -146,24 +129,13 @@ LexGuard.scanner = {
         );
     },
 
-    /**
-     * Retrieves the current text content from the input element.
-     * Handles both textarea and contenteditable elements.
-     * @returns {string} The text content, or empty string if no input found
-     */
     getInputText: function () {
         const input = this.getInputElement();
         if (!input) return '';
         return input.textContent || input.innerText || input.value || '';
     },
 
-    /**
-     * Replaces text within the DOM while preserving structure.
-     * Handles replacements that might span multiple text nodes.
-     * @param {string} searchValue - The text to find and replace
-     * @param {string} replacement - The replacement text
-     * @returns {boolean} True if replacement was successful, false otherwise
-     */
+    // Replace text within DOM while preserving structure
     replaceInDOM: function (searchValue, replacement) {
         const input = this.getInputElement();
         if (!input) return false;
@@ -191,11 +163,6 @@ LexGuard.scanner = {
         return replaced;
     },
 
-    /**
-     * Retrieves all text nodes within an element using TreeWalker.
-     * @param {HTMLElement} element - The element to traverse
-     * @returns {Array<Text>} Array of text nodes
-     */
     getTextNodes: function (element) {
         const textNodes = [];
         const walker = document.createTreeWalker(
@@ -213,13 +180,6 @@ LexGuard.scanner = {
         return textNodes;
     },
 
-    /**
-     * Sets the text content of the input element, handling both contenteditable
-     * and textarea elements. Uses native property setters when available for better
-     * compatibility with frameworks like React.
-     * @param {string} text - The text to set in the input
-     * @returns {Promise<boolean>} Resolves to true if successful, false otherwise
-     */
     setInputTextFallback: function (text) {
         return new Promise((resolve) => {
             const input = this.getInputElement();
@@ -257,32 +217,23 @@ LexGuard.scanner = {
                         data: text
                     }));
                 } else {
-                    const descriptor = Object.getOwnPropertyDescriptor(
+                    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
                         window.HTMLTextAreaElement.prototype,
                         'value'
-                    );
+                    ).set;
 
-                    if (descriptor && typeof descriptor.set === 'function') {
-                        descriptor.set.call(input, text);
-                    } else {
-                        // Fallback: directly assign the value if the descriptor or setter is missing
-                        input.value = text;
-                    }
-
+                    nativeTextAreaValueSetter.call(input, text);
                     input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
                 }
 
-                setTimeout(() => resolve(true), LexGuard.TIMING.SET_INPUT_RESOLVE_DELAY);
+                setTimeout(() => resolve(true), 100);
             });
         });
     },
 
     /**
-     * Validates replace action to guard against unexpected input values.
+     * Validate replace action to guard against unexpected input values.
      * Only known safe actions are allowed to proceed.
-     * @param {string} action - The action to validate ('placeholder' or 'delete')
-     * @returns {boolean} True if action is valid, false otherwise
-     * @private
      */
     _isValidReplaceAction: function (action) {
         const allowedActions = ['placeholder', 'delete'];
@@ -293,30 +244,7 @@ LexGuard.scanner = {
         return true;
     },
 
-    /**
-     * Compute the replacement string for a detected item based on the requested action.
-     * Returns null if the action is unknown so callers can safely no-op.
-     * @param {Object} item - Detected item object.
-     * @param {string} action - One of the allowed replace actions.
-     * @returns {string|null}
-     */
-    _getReplacementValue: function (item, action) {
-        switch (action) {
-            case 'placeholder':
-                return item.placeholder;
-            case 'delete':
-                return '';
-            default:
-                return null;
-        }
-    },
-
-    /**
-     * Ensures only one replace operation runs at a time.
-     * Shows loading overlay during operation and prevents concurrent replacements.
-     * @param {Function} fn - Async function to execute exclusively
-     * @returns {Promise<void>}
-     */
+    // Ensure only one replace operation runs at a time
     runExclusive: async function (fn) {
         if (this.isProcessing) return;
 
@@ -331,12 +259,7 @@ LexGuard.scanner = {
         }
     },
 
-    /**
-     * Replaces a single detected item in the input text.
-     * @param {number} index - Index of the item in detectedItems array
-     * @param {string} action - Replacement action: 'placeholder' or 'delete'
-     * @returns {Promise<void>}
-     */
+    // REPLACE FUNCTIONS
     replaceItem: async function (index, action) {
         if (!this._isValidReplaceAction(action)) {
             return;
@@ -349,13 +272,18 @@ LexGuard.scanner = {
                 return;
             }
 
-            await new Promise(r => setTimeout(r, LexGuard.TIMING.REPLACE_STEP_DELAY));
+            await new Promise(r => setTimeout(r, 50));
 
             const t = LexGuard.t;
-            const replacement = this._getReplacementValue(item, action);
-            if (replacement === null) {
-                console.warn('LexGuard: No replacement value resolved for action', action);
-                return;
+            let replacement = '';
+
+            switch (action) {
+                case 'placeholder':
+                    replacement = item.placeholder;
+                    break;
+                case 'delete':
+                    replacement = '';
+                    break;
             }
 
             const success = this.replaceInDOM(item.value, replacement);
@@ -366,7 +294,7 @@ LexGuard.scanner = {
                 await this.setInputTextFallback(newText);
             }
 
-            await new Promise(r => setTimeout(r, LexGuard.TIMING.REPLACE_STEP_DELAY));
+            await new Promise(r => setTimeout(r, 50));
 
             const patternName = t(`patterns.${item.type}`) || item.name;
             this.detectedItems = this.detectedItems.filter((_, i) => i !== index);
@@ -377,27 +305,26 @@ LexGuard.scanner = {
         });
     },
 
-    /**
-     * Replaces all detected items in the input text with the specified action.
-     * @param {string} action - Replacement action: 'placeholder' or 'delete'
-     * @returns {Promise<void>}
-     */
     replaceAll: async function (action) {
         if (!this._isValidReplaceAction(action)) {
             return;
         }
 
         await this.runExclusive(async () => {
-            await new Promise(r => setTimeout(r, LexGuard.TIMING.REPLACE_STEP_DELAY));
+            await new Promise(r => setTimeout(r, 50));
 
             const t = LexGuard.t;
             let allSuccess = true;
 
             for (const item of this.detectedItems) {
-                const replacement = this._getReplacementValue(item, action);
-                if (replacement === null) {
-                    console.warn('LexGuard: No replacement value resolved for action', action);
-                    continue;
+                let replacement = '';
+                switch (action) {
+                    case 'placeholder':
+                        replacement = item.placeholder;
+                        break;
+                    case 'delete':
+                        replacement = '';
+                        break;
                 }
 
                 const success = this.replaceInDOM(item.value, replacement);
@@ -409,16 +336,21 @@ LexGuard.scanner = {
             if (!allSuccess) {
                 let currentText = this.getInputText();
                 this.detectedItems.forEach(item => {
-                    const replacement = this._getReplacementValue(item, action);
-                    if (replacement === null) {
-                        return;
+                    let replacement = '';
+                    switch (action) {
+                        case 'placeholder':
+                            replacement = item.placeholder;
+                            break;
+                        case 'delete':
+                            replacement = '';
+                            break;
                     }
                     currentText = currentText.split(item.value).join(replacement);
                 });
                 await this.setInputTextFallback(currentText);
             }
 
-            await new Promise(r => setTimeout(r, LexGuard.TIMING.REPLACE_STEP_DELAY));
+            await new Promise(r => setTimeout(r, 50));
 
             this.detectedItems = [];
 
@@ -430,12 +362,6 @@ LexGuard.scanner = {
         });
     },
 
-    /**
-     * Shows a toast notification after a replacement operation.
-     * @param {string} itemName - Name of the item that was replaced
-     * @param {string} action - The action that was performed ('placeholder' or 'delete')
-     * @returns {void}
-     */
     showReplaceFeedback: function (itemName, action) {
         const t = LexGuard.t;
         const actionText = {
@@ -454,11 +380,6 @@ LexGuard.scanner = {
     // SEND BUTTON & ENTER KEY BLOCKING
     _enterKeyHandler: null,
 
-    /**
-     * Blocks the send button and Enter key when sensitive data is detected.
-     * Adds tooltip and event listeners to prevent accidental submission.
-     * @returns {void}
-     */
     blockSendButton: function () {
         if (this.isBlocking) return;
 
@@ -494,11 +415,6 @@ LexGuard.scanner = {
         this.isBlocking = true;
     },
 
-    /**
-     * Blocks Enter key submission when sensitive data is detected.
-     * Uses capture phase to intercept before ChatGPT/Gemini handlers.
-     * @returns {void}
-     */
     blockEnterKey: function () {
         if (this._enterKeyHandler) {
             document.removeEventListener('keydown', this._enterKeyHandler, true);
@@ -531,10 +447,6 @@ LexGuard.scanner = {
         document.addEventListener('keydown', this._enterKeyHandler, true);
     },
 
-    /**
-     * Removes Enter key blocking and restores normal submission behavior.
-     * @returns {void}
-     */
     unblockEnterKey: function () {
         if (this._enterKeyHandler) {
             document.removeEventListener('keydown', this._enterKeyHandler, true);
@@ -542,11 +454,6 @@ LexGuard.scanner = {
         }
     },
 
-    /**
-     * Unblocks the send button and Enter key, restoring normal submission behavior.
-     * Removes tooltip and event listeners.
-     * @returns {void}
-     */
     unblockSendButton: function () {
         const sendBtn = document.querySelector('[data-lexguard-blocked="true"]');
         if (sendBtn) {
@@ -568,11 +475,6 @@ LexGuard.scanner = {
         this.isBlocking = false;
     },
 
-    /**
-     * Handles the "reviewed" action - unblocks send button and hides banner.
-     * Called when user acknowledges they've reviewed the sensitive data.
-     * @returns {void}
-     */
     handleReview: function () {
         this.unblockSendButton();
         LexGuard.ui.hideBanner();
